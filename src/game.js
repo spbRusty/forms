@@ -3,7 +3,7 @@ import { L10N } from './localization/translations.js';
 import { Storage } from './systems/Storage.js';
 import { createPlatform } from './systems/Platform.js';
 import { mkBtn } from './ui/buttons.js';
-import { SHAPE_TYPES, LEVEL_COLORS, shapeTypeForLevel, colorForLevel, hexColor, darkenCol, drawFace, _miniStar, _miniHeart, _drawShapeOutline, buildShapeTexture, randomFace, prebuildAll } from './graphics/Shapes.js';
+import { SHAPE_TYPES, LEVEL_COLORS, shapeTypeForLevel, colorForLevel, hexColor, darkenCol, drawFace, _miniStar, _miniHeart, _drawShapeOutline, buildShapeTexture, randomFace } from './graphics/Shapes.js';
 'use strict';
 window.onerror=function(m,s,l,c,e){var el=document.getElementById('err');if(el)el.textContent=(e&&e.message)||m;};
 window.onunhandledrejection=function(e){var el=document.getElementById('err');if(el)el.textContent=e.reason&&e.reason.message?e.reason.message:String(e.reason);};
@@ -653,9 +653,14 @@ var GameScene=new Phaser.Class({
           gfx.lineBetween(p.x,p.y-p.size*1.8,p.x,p.y+p.size*1.8);
           gfx.fillStyle(0xFFFFFF,alpha);gfx.fillCircle(p.x,p.y,p.size*0.55);
         }else if(p.kind==='confetti'){
-          gfx.save();gfx.translateCanvas(p.x,p.y);gfx.rotateCanvas(p.rot);
-          gfx.fillStyle(p.color,alpha);gfx.fillRect(-p.size,-p.size*0.45,p.size*2,p.size*0.9);
-          gfx.restore();
+          var ca=Math.cos(p.rot),sa=Math.sin(p.rot),hx=p.size,hy=p.size*0.45;
+          gfx.fillStyle(p.color,alpha);
+          gfx.fillPoints([
+            {x:p.x-ca*hx+sa*hy,y:p.y-sa*hx-ca*hy},
+            {x:p.x+ca*hx+sa*hy,y:p.y+sa*hx-ca*hy},
+            {x:p.x+ca*hx-sa*hy,y:p.y+sa*hx+ca*hy},
+            {x:p.x-ca*hx-sa*hy,y:p.y-sa*hx+ca*hy}
+          ],true);
         }else{
           gfx.lineStyle(1.7,p.color,alpha*0.8);gfx.lineBetween(p.px,p.py,p.x,p.y);
           gfx.fillStyle(p.color,alpha);gfx.fillCircle(p.x,p.y,p.size*alpha);
