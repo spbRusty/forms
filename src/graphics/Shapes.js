@@ -1,22 +1,19 @@
 import { SZ, MAX_LEVEL, NUM_FACES } from '../config/constants.js';
 export const SHAPE_TYPES=['circle','triangle','square','diamond','star'];
+// Палитра эволюции: холодные начальные формы, тёплая середина,
+ // затем глубокие насыщенные оттенки и золотой финальный уровень.
 export const LEVEL_COLORS=[
-  0xFF3399,
-  0x00BBFF,
-  0xFF8800,
-  0xCC22FF,
-  0xFFEE00,
-  0x66EE33,
-  0xFF3322,
-  0x3399FF,
-  0xFFFFFF,
-  0x00FFCC
+  0x55DDE0,0x69B7FF,0xA6A0FF,
+  0xFFD166,0xFFAA5B,0xFF7B72,0xF16BAA,
+  0xB16CFF,0x7C63FF,0x4D7CFE,
+  0x4ED6C8,0x5CCB9B,0x86C95A,0xB5C94A,
+  0xE0B94B,0xE99A46,0xE77C64,0xD86BB5,0xB58AE8,
+  0xFFD700
 ];
 export function shapeTypeForLevel(lvl){return SHAPE_TYPES[(lvl-1)%5];}
 export function colorForLevel(lvl){
-  var shapeIdx=(lvl-1)%5;
-  var cycle=Math.floor((lvl-1)/5);
-  return LEVEL_COLORS[(shapeIdx+cycle)%LEVEL_COLORS.length];
+  var index=Math.max(0,Math.min(LEVEL_COLORS.length-1,Math.floor(lvl)-1));
+  return LEVEL_COLORS[index];
 }
 export function hexColor(c){return'#'+('000000'+c.toString(16)).slice(-6);}
 export function darkenCol(col,f){
@@ -128,12 +125,14 @@ export function buildShapeTexture(scene,lvl,fv){
   /* drop shadow */
   g.fillStyle(0x000000,0.30);
   g.fillCircle(half+3,half+5,half-3);
-  /* dark outline layer */
+  /* тёмная внешняя кромка и тонкий светлый контур разделяют соседние формы */
   g.fillStyle(dk,1);
   _drawShapeOutline(g,half,type,half-2);
-  /* main color fill */
+  g.fillStyle(0xFFFFFF,0.78);
+  _drawShapeOutline(g,half,type,half-4);
+  /* основной цвет */
   g.fillStyle(col,1);
-  _drawShapeOutline(g,half,type,half-5);
+  _drawShapeOutline(g,half,type,half-6);
   /* inner lighter shine top-left */
   g.fillStyle(0xFFFFFF,0.28);
   if(type==='circle'){g.fillCircle(half-7,half-7,(half-5)*0.42);}
