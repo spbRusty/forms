@@ -246,7 +246,7 @@ var MenuScene=new Phaser.Class({Extends:Phaser.Scene,initialize:function MenuSce
   _openLeaderboard:function(){
     if(this._leaderboardOpen)return;this._leaderboardOpen=true;
     var self=this,W=GAME_WIDTH,H=GAME_HEIGHT,cx=W/2,pY=72,pH=656,items=[];
-    var ov=this.add.graphics().setDepth(700);ov.fillStyle(0x000000,0.82);ov.fillRect(0,0,W,H);items.push(ov);
+    var ov=this.add.graphics().setDepth(700);ov.fillStyle(0x000000,0.82);ov.fillRect(0,0,W,H);ov.setInteractive(new Phaser.Geom.Rectangle(0,0,W,H),Phaser.Geom.Rectangle.Contains);ov.on('pointerdown',function(pointer,localX,localY,event){event.stopPropagation();});items.push(ov);
     var pn=this.add.graphics().setDepth(701);pn.fillStyle(0x10092B,0.99);pn.fillRoundedRect(18,pY,W-36,pH,20);pn.lineStyle(3,0x55AAFF,0.9);pn.strokeRoundedRect(18,pY,W-36,pH,20);items.push(pn);
     items.push(this.add.text(cx,pY+38,t('leaderboard'),{fontSize:'25px',fontStyle:'bold',color:'#FFFFFF',fontFamily:'Arial Black,Arial,sans-serif',align:'center',wordWrap:{width:350}}).setOrigin(0.5).setDepth(702));
     var status=this.add.text(cx,pY+88,t('leaderboardLoading'),{fontSize:'17px',color:'#BBDDEE',fontFamily:'Arial,sans-serif',align:'center'}).setOrigin(0.5).setDepth(702);items.push(status);
@@ -265,9 +265,9 @@ var MenuScene=new Phaser.Class({Extends:Phaser.Scene,initialize:function MenuSce
         var yy=pY+132+i*43,isTop=e.rank<=3;
         var row=self.add.graphics().setDepth(702);row.fillStyle(isTop?0x443366:0xFFFFFF,isTop?0.72:0.07);row.fillRoundedRect(38,yy-16,W-76,36,8);items.push(row);
         var name=(e.player.publicName||t('leaderboardMe')).slice(0,18);
-        self.add.text(52,yy,'#'+e.rank,{fontSize:'16px',fontStyle:'bold',color:isTop?'#FFD966':'#AACCFF',fontFamily:'Arial Black,Arial,sans-serif'}).setOrigin(0,0.5).setDepth(703);
-        self.add.text(112,yy,name,{fontSize:'15px',color:'#FFFFFF',fontFamily:'Arial,sans-serif'}).setOrigin(0,0.5).setDepth(703);
-        self.add.text(W-52,yy,Math.floor(e.score).toLocaleString(),{fontSize:'16px',fontStyle:'bold',color:'#88FFCC',fontFamily:'Arial Black,Arial,sans-serif'}).setOrigin(1,0.5).setDepth(703);
+        items.push(self.add.text(52,yy,'#'+e.rank,{fontSize:'16px',fontStyle:'bold',color:isTop?'#FFD966':'#AACCFF',fontFamily:'Arial Black,Arial,sans-serif'}).setOrigin(0,0.5).setDepth(703));
+        items.push(self.add.text(112,yy,name,{fontSize:'15px',color:'#FFFFFF',fontFamily:'Arial,sans-serif'}).setOrigin(0,0.5).setDepth(703));
+        items.push(self.add.text(W-52,yy,Math.floor(e.score).toLocaleString(),{fontSize:'16px',fontStyle:'bold',color:'#88FFCC',fontFamily:'Arial Black,Arial,sans-serif'}).setOrigin(1,0.5).setDepth(703));
       });
     }).catch(function(){if(self.scene.isActive('MenuScene')&&self._leaderboardOpen)status.setText(t('leaderboardUnavailable'));});
   },
