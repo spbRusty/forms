@@ -221,7 +221,10 @@ var MenuScene=new Phaser.Class({Extends:Phaser.Scene,initialize:function MenuSce
     var spacing=74,rowX=cx-(lvPrev.length-1)*spacing/2;
     for(var pi=0;pi<lvPrev.length;pi++){
       (function(idx,lv){
-        var fv=randomFace(),key='sh_'+lv+'_'+fv;
+        var fv=randomFace();
+        if(idx===1){lv=lvPrev[0];fv=0;}
+        else if(idx===0){fv=0;}
+        var key=buildShapeTexture(self,lv,fv);
         var sp=self.add.sprite(rowX+idx*spacing,H*0.375,key).setScale(0.72);
         self.tweens.add({targets:sp,y:H*0.375-12,duration:830+idx*190,ease:'Sine.easeInOut',yoyo:true,repeat:-1});
         self.tweens.add({targets:sp,angle:9,duration:1130+idx*160,ease:'Sine.easeInOut',yoyo:true,repeat:-1});
