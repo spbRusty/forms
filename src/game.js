@@ -205,7 +205,6 @@ var BootScene=new Phaser.Class({Extends:Phaser.Scene,initialize:function BootSce
 var MenuScene=new Phaser.Class({Extends:Phaser.Scene,initialize:function MenuScene(){Phaser.Scene.call(this,{key:'MenuScene'});},
   create:function(){
     var self=this;this._settingsOpen=false;this._settingsItems=[];
-    prebuildAll(this);
     initLeftPanel();
     refreshLeftPanel();
     updateRightPanel(Storage.data.totalMerges);
@@ -304,7 +303,7 @@ var GameScene=new Phaser.Class({
     this._shapes=[];this._grid=[];
     this._drag=null;this._dox=0;this._doy=0;
     this._score=0;this._combo=0;this._maxCombo=0;this._mergeN=0;
-    this._praiseProgress=0;this._nextPraise=Phaser.Math.Between(3,5);
+    this._praiseProgress=0;this._nextPraise=Phaser.Math.Between(3,5);this._celebrationIndex=0;
     this._phase=0;this._paused=false;
     this._spawnEv=null;this._tickEv=null;this._t0=0;
     this._offerActive=false;this._offerItems=[];
@@ -527,8 +526,9 @@ var GameScene=new Phaser.Class({
       this._floatTxt(pos.x,pos.y-58,t('combo')+' ×'+this._combo+'  +'+comboBonus,0xFFDD00);
     }
     if(this._combo>=3&&this._combo%3===0){
-      this._fireworks();
-      AudioSystem.playFireworks();
+      var celebration=this._celebrationIndex%5;
+      this._celebrationIndex++;
+      this._playCelebration(celebration);
     }
     this._praiseProgress++;
     if(this._praiseProgress>=this._nextPraise){
@@ -555,114 +555,133 @@ var GameScene=new Phaser.Class({
       if(el>=tot&&g&&g.active)g.destroy();
     }});
   },
-  _fireworks:function(){
-    if(!this.scene.isActive('GameScene')||this._paused)return;
+  _playCelebration:function(type){
+    if(!this.scene.isActive('GameScene')||this._paused||this._celebrationActive)return;
+    this._celebrationActive=true;
     var self=this,W=GAME_WIDTH,H=GAME_HEIGHT;
     var palette=[0xFF3D9A,0xFFE34A,0x43E8FF,0xB66CFF,0x75FF75,0xFFFFFF,0xFF8B45];
-    var particles=[],rockets=[],rings=[],elapsed=0,finished=false;
+    var particles=[],rings=[],elapsed=0;
     var gfx=this.add.graphics().setDepth(460);
-    var launchPoints=[
-      {x:W*0.10,y:H*0.34},{x:W*0.28,y:H*0.20},{x:W*0.50,y:H*0.29},
-      {x:W*0.72,y:H*0.18},{x:W*0.90,y:H*0.36},
-      {x:W*0.20,y:H*0.62},{x:W*0.49,y:H*0.52},{x:W*0.80,y:H*0.64}
-    ];
-    function burst(x,y,color,power){
-      var count=Phaser.Math.Between(42,58),rotation=Math.random()*Math.PI*2;
-      // Два расходящихся кольца искр и плотное ядро.
+    var maxParticles=170;
+    function addParticle(p){if(particles.length<maxParticles)particles.push(p);}
+    function burst(x,y,color){
+      var count=34,rotation=Math.random()*Math.PI*2;
       for(var i=0;i<count;i++){
-        var a=rotation+Math.PI*2*i/count+(Math.random()-0.5)*0.10;
-        var speed=(75+Math.random()*155)*power;
-        var life=850+Math.random()*700;
-        particles.push({x:x,y:y,px:x,py:y,vx:Math.cos(a)*speed,vy:Math.sin(a)*speed,
-          life:life,max:life,size:1.5+Math.random()*2.7,color:color,kind:i%4===0?'glint':'spark'});
+        var a=rotation+Math.PI*2*i/count+(Math.random()-0.5)*0.12;
+        var speed=75+Math.random()*145,life=850+Math.random()*450;
+        addParticle({x:x,y:y,px:x,py:y,vx:Math.cos(a)*speed,vy:Math.sin(a)*speed,
+          life:life,max:life,size:1.7+Math.random()*2.1,color:color,kind:'spark'});
       }
-      for(var j=0;j<18;j++){
-        var a2=Math.random()*Math.PI*2,sp=35+Math.random()*105,life2=650+Math.random()*600;
-        particles.push({x:x,y:y,px:x,py:y,vx:Math.cos(a2)*sp,vy:Math.sin(a2)*sp,
-          life:life2,max:life2,size:1+Math.random()*1.8,color:palette[Phaser.Math.Between(0,palette.length-1)],kind:'spark'});
-      }
-      rings.push({x:x,y:y,r:3,life:440,max:440,color:color});
-      // Несколько ярких звёзд с длинными лучами.
-      for(var k=0;k<5;k++){
-        var aa=Math.random()*Math.PI*2,ss=100+Math.random()*100,ll=500+Math.random()*350;
-        particles.push({x:x,y:y,px:x,py:y,vx:Math.cos(aa)*ss,vy:Math.sin(aa)*ss,
-          life:ll,max:ll,size:3.4,color:0xFFFFFF,kind:'star'});
-      }
+      rings.push({x:x,y:y,r:2,life:400,max:400,color:color});
     }
-    function launch(point,index){
-      var fromX=point.x+(Math.random()-0.5)*W*0.20;
-      var fromY=H+18;
-      var color=palette[index%palette.length];
-      rockets.push({x:fromX,y:fromY,px:fromX,py:fromY,
-        tx:point.x+(Math.random()-0.5)*34,ty:point.y+(Math.random()-0.5)*36,
-        t:0,duration:520+Math.random()*220,color:color,index:index});
-    }
-    // Первая волна раскрывает всё поле, вторая заполняет промежутки,
-    // финальная волна даёт несколько крупных разноцветных залпов.
-    launchPoints.forEach(function(p,i){self.time.delayedCall(i*95,function(){if(self.scene.isActive('GameScene')&&!self._paused)launch(p,i);});});
-    [0,210,420,650,880].forEach(function(delay,i){
-      self.time.delayedCall(delay,function(){
-        if(!self.scene.isActive('GameScene')||self._paused)return;
-        var p=launchPoints[(i*3+2)%launchPoints.length];
-        launch({x:W-p.x,y:p.y+(i%2?35:-25)},i+3);
-      });
-    });
-    this.cameras.main.flash(130,255,255,255,false);
-    this.cameras.main.shake(180,0.0035);
-    var ev=this.time.addEvent({delay:16,loop:true,callback:function(){
-      if(!gfx.active||!self.scene.isActive('GameScene')){ev.remove();if(gfx.active)gfx.destroy();return;}
-      elapsed+=16;gfx.clear();
-      // Полёт ракет с ярким хвостом.
-      for(var ri=rockets.length-1;ri>=0;ri--){
-        var r=rockets[ri];r.px=r.x;r.py=r.y;r.t+=16/r.duration;
-        var q=Math.min(1,r.t),ease=1-Math.pow(1-q,2);
-        r.x=r.x+(r.tx-r.x)*Math.min(1,16/Math.max(16,r.duration*(1-q+0.03)));
-        r.y=H+18+(r.ty-(H+18))*ease;
-        gfx.lineStyle(5, r.color,0.18);gfx.lineBetween(r.px,r.py,r.x,r.y);
-        gfx.lineStyle(2.2,0xFFFFFF,0.95);gfx.lineBetween(r.px,r.py,r.x,r.y);
-        gfx.fillStyle(r.color,0.9);gfx.fillCircle(r.x,r.y,3.5);
-        if(q>=1){burst(r.tx,r.ty,r.color,r.index%3===0?1.2:1);rockets.splice(ri,1);}
+    if(type===0){
+      // Пять крупных разноцветных залпов, распределённых по всему полю.
+      var points=[0.12,0.31,0.50,0.69,0.88];
+      points.forEach(function(px,i){burst(W*px,H*(0.25+(i%2)*0.27),palette[i]);});
+      AudioSystem.playFireworks();
+      this.cameras.main.flash(100,255,255,255,false);
+      this.cameras.main.shake(150,0.0025);
+    }else if(type===1){
+      // Большой поток сердец поднимается снизу и расходится веером.
+      for(var h=0;h<105;h++){
+        var x=Math.random()*W,y=H+Math.random()*100,life=1700+Math.random()*900;
+        addParticle({x:x,y:y,px:x,py:y,vx:(Math.random()-0.5)*95,vy:-(100+Math.random()*150),
+          life:life,max:life,size:5+Math.random()*7,color:palette[h%3],kind:'heart',rot:(Math.random()-0.5)*0.5});
       }
-      // Искры, длинные световые следы и звёздные вспышки.
-      for(var pi=particles.length-1;pi>=0;pi--){
-        var p=particles[pi];p.px=p.x;p.py=p.y;
-        p.life-=16;p.x+=p.vx*0.016;p.y+=p.vy*0.016;
-        p.vx*=0.986;p.vy=p.vy*0.986+115*0.016;
-        if(p.life<=0){particles.splice(pi,1);continue;}
-        var a=Math.min(1,p.life/180)*Math.min(1,p.life/p.max*2);
-        if(p.kind==='star'){
-          gfx.lineStyle(2.6,0xFFFFFF,a);gfx.lineBetween(p.x-5,p.y,p.x+5,p.y);
-          gfx.lineBetween(p.x,p.y-5,p.x,p.y+5);
-          gfx.fillStyle(0xFFFFFF,a);gfx.fillCircle(p.x,p.y,2.8*a);
-        }else{
-          gfx.lineStyle(p.kind==='glint'?2.5:1.5,p.color,a*0.8);
-          gfx.lineBetween(p.px,p.py,p.x,p.y);
-          gfx.fillStyle(p.color,a);gfx.fillCircle(p.x,p.y,p.size*a);
-          if(p.kind==='glint'){gfx.fillStyle(0xFFFFFF,a*0.9);gfx.fillCircle(p.x,p.y,1.6*a);}
+      AudioSystem.playHearts();
+      this.cameras.main.flash(90,255,105,170,false);
+    }else if(type===2){
+      // Золотой звёздный дождь с мерцающими крупными звёздами.
+      for(var st=0;st<145;st++){
+        var sx=Math.random()*W,sy=-Math.random()*H*0.65,sl=1600+Math.random()*1000;
+        addParticle({x:sx,y:sy,px:sx,py:sy,vx:(Math.random()-0.5)*35,vy:100+Math.random()*145,
+          life:sl,max:sl,size:2.5+Math.random()*4,color:st%5===0?0xFFFFFF:0xFFD84A,kind:'star'});
+      }
+      AudioSystem.playStars();
+      this.cameras.main.flash(110,255,225,120,false);
+    }else if(type===3){
+      // Семь цветных лент прокатываются через экран волной.
+      for(var band=0;band<7;band++){
+        for(var step=0;step<22;step++){
+          var rx=-20-step*22,ry=H*0.30+band*24;
+          addParticle({x:rx,y:ry,px:rx,py:ry,vx:145+band*5,vy:0,life:2100,max:2100,
+            size:3.5,color:palette[band],kind:'wave',phase:band*0.55+step*0.16,baseY:ry});
         }
       }
-      // Расширяющиеся световые ударные кольца.
-      for(var gi=rings.length-1;gi>=0;gi--){
-        var g=rings[gi];g.life-=16;g.r+=3.0;
-        if(g.life<=0){rings.splice(gi,1);continue;}
-        gfx.lineStyle(3, g.color,g.life/g.max*0.65);gfx.strokeCircle(g.x,g.y,g.r);
-        gfx.lineStyle(1,0xFFFFFF,g.life/g.max*0.55);gfx.strokeCircle(g.x,g.y,g.r*0.72);
+      AudioSystem.playRainbow();
+      this.cameras.main.flash(100,150,100,255,false);
+    }else{
+      // Плотный разноцветный залп конфетти с лентами.
+      for(var cf=0;cf<155;cf++){
+        var cx=Math.random()*W,cy=-Math.random()*H*0.8,cl=1800+Math.random()*1200;
+        addParticle({x:cx,y:cy,px:cx,py:cy,vx:(Math.random()-0.5)*90,vy:90+Math.random()*170,
+          life:cl,max:cl,size:3+Math.random()*5,color:palette[cf%palette.length],kind:'confetti',rot:Math.random()*6.28,spin:(Math.random()-0.5)*0.12});
       }
-      if(elapsed>3300&&particles.length===0&&rockets.length===0&&rings.length===0){
-        ev.remove();if(gfx.active)gfx.destroy();finished=true;
+      AudioSystem.playConfetti();
+      this.cameras.main.flash(110,120,255,190,false);
+    }
+    var ev=this.time.addEvent({delay:33,loop:true,callback:function(){
+      if(!gfx.active||!self.scene.isActive('GameScene')||self._paused){
+        ev.remove();if(gfx.active)gfx.destroy();self._celebrationActive=false;return;
       }
-      if(elapsed>5200&&!finished){ev.remove();if(gfx.active)gfx.destroy();}
+      elapsed+=33;gfx.clear();
+      for(var i=particles.length-1;i>=0;i--){
+        var p=particles[i];p.px=p.x;p.py=p.y;p.life-=33;
+        if(p.life<=0||p.x<-40||p.x>W+40||p.y>H+70){particles.splice(i,1);continue;}
+        if(p.kind==='wave'){
+          p.x+=p.vx*0.033;
+          p.y=p.baseY+Math.sin(elapsed*0.004+p.phase)*34;
+          var wa=Math.min(1,p.life/280)*0.82;
+          gfx.fillStyle(p.color,wa);gfx.fillCircle(p.x,p.y,p.size);
+          gfx.fillStyle(0xFFFFFF,wa*0.55);gfx.fillCircle(p.x,p.y,1.4);
+          continue;
+        }
+        p.x+=p.vx*0.033;p.y+=p.vy*0.033;
+        if(p.kind==='spark'){p.vx*=0.985;p.vy=p.vy*0.985+115*0.033;}
+        else if(p.kind==='heart'){p.vx+=Math.sin(elapsed*0.003+p.x*0.02)*5*0.033;p.rot+=0.006;}
+        else if(p.kind==='star'){p.rot=(p.rot||0)+0.035;p.x+=Math.sin(elapsed*0.002+p.y)*0.25;}
+        else if(p.kind==='confetti'){p.vx+=Math.sin(elapsed*0.004+p.y*0.02)*14*0.033;p.rot+=p.spin;}
+        var alpha=Math.min(1,p.life/260)*Math.min(1,p.life/p.max*2);
+        if(p.kind==='heart'){
+          var hr=p.size,hy=p.y;
+          gfx.fillStyle(p.color,alpha);
+          gfx.fillCircle(p.x-hr*0.34,hy-hr*0.18,hr*0.38);
+          gfx.fillCircle(p.x+hr*0.34,hy-hr*0.18,hr*0.38);
+          gfx.fillTriangle(p.x-hr*0.68,hy-hr*0.08,p.x+hr*0.68,hy-hr*0.08,p.x,hy+hr*0.82);
+        }else if(p.kind==='star'){
+          gfx.lineStyle(2,p.color,alpha);gfx.lineBetween(p.x-p.size*1.8,p.y,p.x+p.size*1.8,p.y);
+          gfx.lineBetween(p.x,p.y-p.size*1.8,p.x,p.y+p.size*1.8);
+          gfx.fillStyle(0xFFFFFF,alpha);gfx.fillCircle(p.x,p.y,p.size*0.55);
+        }else if(p.kind==='confetti'){
+          gfx.save();gfx.translateCanvas(p.x,p.y);gfx.rotateCanvas(p.rot);
+          gfx.fillStyle(p.color,alpha);gfx.fillRect(-p.size,-p.size*0.45,p.size*2,p.size*0.9);
+          gfx.restore();
+        }else{
+          gfx.lineStyle(1.7,p.color,alpha*0.8);gfx.lineBetween(p.px,p.py,p.x,p.y);
+          gfx.fillStyle(p.color,alpha);gfx.fillCircle(p.x,p.y,p.size*alpha);
+        }
+      }
+      for(var ri=rings.length-1;ri>=0;ri--){
+        var ring=rings[ri];ring.life-=33;ring.r+=5;
+        if(ring.life<=0){rings.splice(ri,1);continue;}
+        gfx.lineStyle(2.5,ring.color,ring.life/ring.max*0.65);gfx.strokeCircle(ring.x,ring.y,ring.r);
+      }
+      if(elapsed>2500&&particles.length===0&&rings.length===0){
+        ev.remove();if(gfx.active)gfx.destroy();self._celebrationActive=false;
+      }
+      if(elapsed>4200){ev.remove();if(gfx.active)gfx.destroy();self._celebrationActive=false;}
     }});
   },
+  _fireworks:function(){this._playCelebration(0);},
   _celebrateFaces:function(){
-    var self=this;
-    AudioSystem.playAwe();
+    // Один общий лёгкий импульс вместо смены текстур и множества тяжёлых tween.
+    var self=this,count=0;
     this._shapes.forEach(function(sp){
-      if(!sp||!sp.active||!sp.alive)return;
-      var original=sp.faceVariant,token=(sp._celebrateToken||0)+1;sp._celebrateToken=token;
-      sp.setTexture(buildShapeTexture(self,sp.level,7));
-      self.tweens.add({targets:sp,scaleX:1.22,scaleY:1.22,angle:(self._openingPair&&self._openingPair.indexOf(sp)!==-1)?0:Phaser.Math.Between(-12,12),duration:280,ease:'Back.easeOut',yoyo:true,repeat:2,onComplete:function(){if(sp&&sp.active&&sp._celebrateToken===token){sp.setTexture(buildShapeTexture(self,sp.level,original));sp.angle=0;sp.setScale(1);}}});
+      if(!sp||!sp.active||!sp.alive||count>=12)return;
+      count++;
+      self.tweens.add({targets:sp,scaleX:1.10,scaleY:1.10,duration:150,ease:'Sine.easeOut',yoyo:true});
     });
+    AudioSystem.playAwe();
   },
   _showPraise:function(){
     if(!this.scene.isActive('GameScene'))return;
