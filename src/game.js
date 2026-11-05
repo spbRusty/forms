@@ -231,6 +231,7 @@ var MenuScene=new Phaser.Class({Extends:Phaser.Scene,initialize:function MenuSce
     this.add.text(cx,H*0.546,t('best')+': '+Storage.data.bestScore,{fontSize:'22px',color:'#FFD700',fontFamily:'Arial,sans-serif',stroke:'#664400',strokeThickness:2}).setOrigin(0.5);
     this.add.text(cx,H*0.588,t('formsOpened')+': '+Storage.data.formsOpened.length+'/'+MAX_LEVEL,{fontSize:'16px',color:'#AACCFF',fontFamily:'Arial,sans-serif'}).setOrigin(0.5);
     mkBtn(this,cx,H*0.675,t('play'),250,64,0xFF3399,0xCC1177,function(){AudioSystem.click();self.scene.start('GameScene');});
+    mkBtn(this,cx,H*0.765,t('leaderboard'),230,44,0x2266AA,0x174477,function(){AudioSystem.click();self._openLeaderboard();});
     var bottomY = H - 40;
     var lbtn=this.add.text(W/2-90,bottomY,t('langBtn'),{fontSize:'22px',fontStyle:'bold',color:'#AAFFCC',stroke:'#003322',strokeThickness:2,fontFamily:'Arial Black,Arial,sans-serif'}).setOrigin(0.5).setInteractive({useHandCursor:true});
     lbtn.on('pointerdown',function(){AudioSystem.click();switchLang();self.scene.restart();});
