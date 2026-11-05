@@ -446,7 +446,9 @@ var AudioSystem = (function () {
     playJump,
     playClick,
     playDeath,
-    playLapComplete,\n    playAwe,\n    playFireworks,
+    playLapComplete,
+    playAwe,
+    playFireworks,
 
     // управление
     setIntensity,
