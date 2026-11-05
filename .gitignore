@@ -1,4 +1,7 @@
-game.zip
+node_modules/
+dist/
+.vite/
+*.zip
 *.png
 вся игра со всеми подуровнями.txt
 скр/

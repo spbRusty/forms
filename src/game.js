@@ -1,3 +1,9 @@
+import { DEBUG, GAME_WIDTH, GAME_HEIGHT, CELL_SIZE, GRID_COLS, GRID_ROWS, SZ, MAX_LEVEL, SPAWN_BASE, INTER_THRESHOLD, NUM_FACES } from './config/constants.js';
+import { L10N } from './localization/translations.js';
+import { Storage } from './systems/Storage.js';
+import { createPlatform } from './systems/Platform.js';
+import { mkBtn } from './ui/buttons.js';
+import { SHAPE_TYPES, LEVEL_COLORS, shapeTypeForLevel, colorForLevel, hexColor, darkenCol, drawFace, _miniStar, _miniHeart, _drawShapeOutline, buildShapeTexture, randomFace, prebuildAll } from './graphics/Shapes.js';
 'use strict';
 window.onerror=function(m,s,l,c,e){var el=document.getElementById('err');if(el)el.textContent=(e&&e.message)||m;};
 window.onunhandledrejection=function(e){var el=document.getElementById('err');if(el)el.textContent=e.reason&&e.reason.message?e.reason.message:String(e.reason);};
@@ -6,10 +12,6 @@ document.body.oncontextmenu=function(){return false;};
 document.addEventListener('selectstart',function(e){e.preventDefault();return false;});
 document.addEventListener('touchstart',function(e){if(e.touches.length>1)e.preventDefault();},{passive:false});
 
-import { DEBUG, GAME_WIDTH, GAME_HEIGHT, CELL_SIZE, GRID_COLS, GRID_ROWS, SZ, MAX_LEVEL, SPAWN_BASE, INTER_THRESHOLD, NUM_FACES } from './config/constants.js';
-import { L10N } from './localization/translations.js';
-import { Storage } from './systems/Storage.js';
-import { SHAPE_TYPES, LEVEL_COLORS, shapeTypeForLevel, colorForLevel, hexColor, darkenCol, drawFace, _miniStar, _miniHeart, _drawShapeOutline, buildShapeTexture, randomFace, prebuildAll } from './graphics/Shapes.js';
 const Phaser = globalThis.Phaser;
 const AudioSystem = globalThis.AudioSystem;
 window.currentLang='ru';window.ysdk=null;window.deathCount=0;
@@ -155,59 +157,9 @@ function updateRightPanel(merges){
   var mv=document.getElementById('rp-merges-val');if(mv)mv.textContent=(merges||0).toLocaleString();
 }
 
-/* ================================================================ BANNER ================================================================ */
-var Banner={
-  show:function(){try{if(window.ysdk&&window.ysdk.adv&&window.ysdk.adv.showBannerAdv)window.ysdk.adv.showBannerAdv();}catch(_){}},
-  hide:function(){try{if(window.ysdk&&window.ysdk.adv&&window.ysdk.adv.hideBannerAdv)window.ysdk.adv.hideBannerAdv();}catch(_){}}
-};
-
-/* ================================================================ ADS ================================================================ */
-var Ads={
-  _busy:false,_lastInter:0,COOL:180000,
-  inter:function(cb){
-    var now=Date.now();
-    if(!window.ysdk||(now-Ads._lastInter<Ads.COOL)){if(cb)cb();return;}
-    Ads._busy=true;Ads._lastInter=now;
-    _adPause();
-    try{window.ysdk.adv.showFullscreenAdv({callbacks:{
-      onClose:function(){Ads._busy=false;_adResume();if(cb)cb();},
-      onError:function(){Ads._busy=false;_adResume();if(cb)cb();}
-    }});}catch(e){Ads._busy=false;if(cb)cb();}
-  },
-  rewarded:function(onReward,onClose){
-    if(!window.ysdk){if(onReward)onReward();if(onClose)onClose();return;}
-    Ads._busy=true;
-    _adPause();
-    try{window.ysdk.adv.showRewardedVideo({callbacks:{
-      onRewarded:function(){if(onReward)onReward();},
-      onClose:function(){Ads._busy=false;_adResume();_ysStartIfGame();if(onClose)onClose();},
-      onError:function(){Ads._busy=false;_adResume();if(onClose)onClose();}
-    }});}catch(e){Ads._busy=false;if(onClose)onClose();}
-  }
-};
+const { Ads, Banner } = createPlatform({ pause: _adPause, resume: _adResume, startIfGame: _ysStartIfGame });
 
 /* ================================================================ BTN ================================================================ */
-function mkBtn(scene,x,y,label,w,h,col,colH,cb){
-  var items=[],rad=Math.floor(h*0.42);
-  var dk=darkenCol(col,0.42);
-  var g=scene.add.graphics();
-  function _draw(c,lit){
-    g.clear();
-    g.fillStyle(darkenCol(c,0.35),1);g.fillRoundedRect(x-w/2+2,y-h/2+5,w,h-2,rad);
-    g.fillStyle(c,1);g.fillRoundedRect(x-w/2,y-h/2,w,h-3,rad);
-    g.lineStyle(3,0xFFFFFF,lit?0.5:0.3);g.strokeRoundedRect(x-w/2,y-h/2,w,h-3,rad);
-  }
-  _draw(col,false);
-  items.push(g);
-  var tx=scene.add.text(x,y-1,label,{fontSize:h>=54?'22px':'17px',fontStyle:'bold',color:'#ffffff',fontFamily:'Arial Rounded MT Bold,Arial Black,Arial,sans-serif',stroke:'#000000',strokeThickness:h>=54?3:2}).setOrigin(0.5);
-  items.push(tx);
-  var zn=scene.add.zone(x,y,w,h).setInteractive({useHandCursor:true});items.push(zn);
-  zn.on('pointerover',function(){_draw(colH,true);tx.setScale(1.06);});
-  zn.on('pointerout',function(){_draw(col,false);tx.setScale(1);});
-  zn.on('pointerdown',function(){g.clear();g.fillStyle(colH,1);g.fillRoundedRect(x-w/2,y-h/2+3,w,h-3,rad);if(cb)cb();});
-  return items;
-}
-
 /* ================================================================ BOOT ================================================================ */
 var BootScene=new Phaser.Class({Extends:Phaser.Scene,initialize:function BootScene(){Phaser.Scene.call(this,{key:'BootScene'});},
   create:function(){
