@@ -258,7 +258,10 @@ var MenuScene=new Phaser.Class({Extends:Phaser.Scene,initialize:function MenuSce
       if(!self.scene.isActive('MenuScene')||!self._leaderboardOpen)return;
       var entries=(data&&data.entries)||[],top=entries.filter(function(e){return e&&e.player;}).sort(function(x,y){return x.rank-y.rank;}),unique=[],seen={};
       top.forEach(function(e){var k=String(e.player.uniqueID||e.rank);if(!seen[k]){seen[k]=true;unique.push(e);}});
-      if(unique.length>11)unique=unique.slice(0,11);
+      var topTen=unique.filter(function(e){return e.rank<=10;}).slice(0,10);
+      var own=data&&data.userRank?unique.find(function(e){return e.rank===data.userRank;}):null;
+      if(own&&!topTen.some(function(e){return e.rank===own.rank;}))topTen.push(own);
+      unique=topTen;
       if(!unique.length){status.setText(t('leaderboardEmpty'));return;}
       status.setVisible(false);
       unique.forEach(function(e,i){
