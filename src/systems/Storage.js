@@ -10,16 +10,17 @@ function normalize(data) {
   return out;
 }
 export const Storage = {
-  data: normalize(DEFAULT_DATA), _player: null, _cloudReady: false, _saveChain: Promise.resolve(),
-  load() { try { const raw=localStorage.getItem('gm30'); if(raw) this.data=normalize(Object.assign({},this.data,JSON.parse(raw))); } catch(_) {} return this.data; },
+  data: normalize(DEFAULT_DATA), _player: null, _cloudReady: false, _localLoaded: false, _saveChain: Promise.resolve(),
+  load() { try { const raw=localStorage.getItem('gm30'); if(raw) { this._localLoaded=true; this.data=normalize(Object.assign({},this.data,JSON.parse(raw))); } } catch(_) {} return this.data; },
   initPlayer(sdk) {
     if(!sdk || typeof sdk.getPlayer!=='function') return Promise.resolve();
     return Promise.resolve().then(()=>sdk.getPlayer({scopes:false})).then(player=>{this._player=player;return player.getData();}).then(cloud=>{
       const local=this.data, remote=cloud||{};
-      const merged=normalize(Object.assign({},remote,local));
+      const merged=normalize(Object.assign({},remote,this._localLoaded?local:{}));
       merged.bestScore=Math.max(Number(remote.bestScore)||0,local.bestScore);
       merged.totalMerges=Math.max(Number(remote.totalMerges)||0,local.totalMerges);
       merged.formsOpened=Array.from(new Set([...(Array.isArray(remote.formsOpened)?remote.formsOpened:[]),...local.formsOpened])).map(Number).filter(n=>Number.isInteger(n)&&n>0);
+      if(!this._localLoaded){merged.soundOn=remote.soundOn!==false;merged.musicOn=remote.musicOn!==false;merged.firstRun=remote.firstRun!==false;}
       this.data=merged;this._cloudReady=true;this.save();
     }).catch(()=>{});
   },
