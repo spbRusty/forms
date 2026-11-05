@@ -334,6 +334,21 @@ var GameScene=new Phaser.Class({
     var openingTexture=buildShapeTexture(this,openingLevel,openingFace);
     this._spawnShape(true,openingLevel,openingFace,{r:0,c:0},openingTexture);
     this._spawnShape(true,openingLevel,openingFace,{r:0,c:1},openingTexture);
+    // Жёстко фиксируем именно первые два созданных объекта: один уровень,
+    // один вариант лица и одна общая текстура. Проверка после стартовых tween.
+    this._openingPair=this._shapes.slice(0,2);
+    var lockOpeningPair=function(){
+      if(!self.scene.isActive('GameScene')||!self._openingPair||self._openingPair.length!==2)return;
+      self._openingPair.forEach(function(sp){
+        if(!sp||!sp.active)return;
+        sp.level=openingLevel;sp.faceVariant=openingFace;
+        sp.setTexture(openingTexture);sp.setAngle(0);sp.setTint(0xffffff);
+      });
+    };
+    lockOpeningPair();
+    [100,350,800,1500].forEach(function(ms){
+      self.time.delayedCall(ms,lockOpeningPair);
+    });
     this._spawnEv=this.time.addEvent({delay:SPAWN_BASE,callback:this._autoSpawn,callbackScope:this,loop:true});
     this._tickEv=this.time.addEvent({delay:1000,callback:this._tick,callbackScope:this,loop:true});
     this._t0=Date.now();
