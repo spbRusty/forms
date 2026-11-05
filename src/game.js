@@ -24,8 +24,9 @@ function _ysStart(){try{if(window.ysdk&&window.ysdk.features&&window.ysdk.featur
 function _ysStartIfGame(){try{if(window.ysdk&&window.ysdk.features&&window.ysdk.features.GameplayAPI){var _gs=window.game&&window.game.scene&&window.game.scene.getScene('GameScene');if(_gs&&_gs.scene.isActive())window.ysdk.features.GameplayAPI.start();}}catch(_){}}
 const LEADERBOARD_ID='best_score';
 function _submitLeaderboardScore(score){try{var sdk=window.ysdk;if(!sdk||!sdk.leaderboards||!sdk.isAvailableMethod||!score)return;Promise.resolve(sdk.isAvailableMethod('leaderboards.setScore')).then(function(ok){if(ok)return sdk.leaderboards.setScore(LEADERBOARD_ID,Math.floor(score));}).catch(function(){});}catch(_){}}
-function _adPause(){MusicSystem.pause();_ysStop();}
-function _adResume(){AudioSystem.resume();if(window.game&&window.game.scene&&window.game.scene.isActive('GameScene'))MusicSystem.resume();}
+function _setGamePaused(value){try{var gs=window.game&&window.game.scene&&window.game.scene.getScene('GameScene');if(gs&&gs.scene.isActive()&&gs.registry.get('isPaused')!==value)gs.registry.set('isPaused',value);}catch(_){}}
+function _adPause(){MusicSystem.pause();AudioSystem.muteAll();_setGamePaused(true);_ysStop();}
+function _adResume(){AudioSystem.unmuteAll();AudioSystem.resume();_setGamePaused(false);if(window.game&&window.game.scene&&window.game.scene.isActive('GameScene')){MusicSystem.resume();_ysStartIfGame();}}
 
 function isDesktopDevice(){
   try{if(localStorage.getItem('forceDesktop')==='true')return true;}catch(e){}
@@ -172,8 +173,10 @@ var BootScene=new Phaser.Class({Extends:Phaser.Scene,initialize:function BootSce
     this.add.text(GAME_WIDTH/2,GAME_HEIGHT/2,t('loading'),{fontSize:'28px',fontStyle:'bold',color:'#cc88ff',fontFamily:'Arial Black,Arial,sans-serif',stroke:'#330066',strokeThickness:3}).setOrigin(0.5);
     document.addEventListener('visibilitychange',function(){
       if(document.hidden){_adPause();}
-      else{AudioSystem.resume();if(window.game&&window.game.scene&&window.game.scene.isActive('GameScene')){MusicSystem.resume();_ysStartIfGame();}}
+      else if(!Ads._busy){_adResume();}
     });
+    window.addEventListener('blur',_adPause);
+    window.addEventListener('focus',function(){if(!document.hidden&&!Ads._busy)_adResume();});
     document.addEventListener('pointerdown',function(){AudioSystem.resume();},{once:true,passive:true});
     document.addEventListener('touchstart',function(){AudioSystem.resume();},{once:true,passive:true});
     window._loadingTimeout=setTimeout(function(){var el=document.getElementById('err');if(el)el.textContent=t('loadingError');},90000);
@@ -468,6 +471,7 @@ var GameScene=new Phaser.Class({
     }
   },
   _pu:function(ptr){
+    if(this._merging){this._drag=null;return;}
     if(!this._drag)return;
     var sp=this._drag;this._drag=null;
     if(this._hlGfx&&this._hlGfx.active)this._hlGfx.clear();
@@ -483,12 +487,12 @@ var GameScene=new Phaser.Class({
     sp.setDepth(1);this._combo=0;
   },
   _merge:function(a,b){
-    if(!a.alive||!b.alive)return;
+    if(this._merging||!a||!b||a===b||!a.alive||!b.alive)return;
+    this._merging=true;
     var self=this,tr=b.gridRow,tc2=b.gridCol,tx=b.x,ty=b.y,nl=Math.min(a.level+1,MAX_LEVEL);
     a.alive=false;b.alive=false;
     this._grid[a.gridRow][a.gridCol]=null;this._grid[b.gridRow][b.gridCol]=null;this._grid[tr][tc2]='_';
     var aR=a,bR=b;this._shapes=this._shapes.filter(function(s){return s!==aR&&s!==bR;});
-    this._merging=true;
     this.tweens.add({targets:a,x:tx,y:ty,scaleX:0.08,scaleY:0.08,duration:100,ease:'Power2'});
     this.tweens.add({targets:b,scaleX:0.08,scaleY:0.08,duration:100,ease:'Power2',onComplete:function(){
       if(aR&&aR.active)aR.destroy();if(bR&&bR.active)bR.destroy();
