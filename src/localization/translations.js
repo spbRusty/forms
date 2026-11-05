@@ -12,7 +12,10 @@ export const L10N = {
     freeClear:'Очистить бесплатно',gameOver:'ИГРА ОКОНЧЕНА',
     yourScore:'Ваш счёт',newRecordShort:'🏆 РЕКОРД!',decline:'Завершить игру',
     forms:'Формы',continuead:'📺 Очистить половину поля',
-    pageTitle:'Merge It!',
+    pageTitle:'Слияй-Ка',
+    leaderboard:'ТАБЛИЦА ЛИДЕРОВ',leaderboardLoading:'Загружаем рейтинг…',leaderboardEmpty:'Пока нет результатов',leaderboardUnavailable:'Рейтинг пока недоступен',leaderboardMe:'Вы',
+    praise:['Отлично получается!','Ты молодец!','Так держать!','Здорово!','Прекрасно!','Вот это ход!','Супер!','Идеально!'],
+    praiseCombo:['Невероятное комбо!','Ты просто машина!','Вот это серия!','Потрясающе!','Никто тебя не остановит!'],
   },
   en:{play:'PLAY',score:'Score',best:'Best',again:'PLAY AGAIN',menu:'MENU',
     loadingError:'Loading error.',close:'✕',
@@ -27,6 +30,9 @@ export const L10N = {
     freeClear:'Clear (free)',gameOver:'GAME OVER',
     yourScore:'Your score',newRecordShort:'🏆 RECORD!',decline:'End game',
     forms:'Shapes',continuead:'📺 Clear half the board',
-    pageTitle:'Слияй-Ка',
+    pageTitle:'Merge It!',
+    leaderboard:'LEADERBOARD',leaderboardLoading:'Loading leaderboard…',leaderboardEmpty:'No scores yet',leaderboardUnavailable:'Leaderboard is unavailable',leaderboardMe:'You',
+    praise:['Great job!','You are doing great!','Keep it up!','Awesome!','Brilliant!','Nice move!','Super!','Perfect!'],
+    praiseCombo:['Amazing combo!','You are on fire!','What a streak!','Fantastic!','Unstoppable!'],
   }
 };
