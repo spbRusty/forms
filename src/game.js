@@ -218,23 +218,18 @@ var MenuScene=new Phaser.Class({Extends:Phaser.Scene,initialize:function MenuSce
     this.add.text(cx,H*0.19,t('gameSubtitle'),{fontSize:'22px',color:'#FFD0FF',fontFamily:'Arial,sans-serif',stroke:'#660066',strokeThickness:2}).setOrigin(0.5);
     var shapeSets=[[1,6,11,16],[2,7,12,17],[3,8,13,18],[4,9,14,19],[5,10,15,20]];
     var lvPrev=shapeSets.map(function(set){return set[Math.floor(Math.random()*set.length)];});
-    // Первые две фигуры меню всегда создаются из одной и той же текстуры:
-    // одинаковые уровень, цвет, геометрия и лицо.
-    var openingPreviewTexture=buildShapeTexture(self,1,0);
     var spacing=74,rowX=cx-(lvPrev.length-1)*spacing/2;
-    var previewSprites=[];
     for(var pi=0;pi<lvPrev.length;pi++){
-      var key=pi<2?openingPreviewTexture:buildShapeTexture(self,lvPrev[pi],randomFace());
-      var sp=self.add.sprite(rowX+pi*spacing,H*0.375,key).setScale(0.72);
-      previewSprites.push(sp);
-      if(pi>=2){
-        self.tweens.add({targets:sp,y:H*0.375-12,duration:830+pi*190,ease:'Sine.easeInOut',yoyo:true,repeat:-1});
-        self.tweens.add({targets:sp,angle:9,duration:1130+pi*160,ease:'Sine.easeInOut',yoyo:true,repeat:-1});
-      }
+      (function(idx,lv){
+        var fv=randomFace();
+        if(idx===1){lv=lvPrev[0];fv=0;}
+        else if(idx===0){fv=0;}
+        var key=buildShapeTexture(self,lv,fv);
+        var sp=self.add.sprite(rowX+idx*spacing,H*0.375,key).setScale(0.72);
+        self.tweens.add({targets:sp,y:H*0.375-12,duration:830+idx*190,ease:'Sine.easeInOut',yoyo:true,repeat:-1});
+        self.tweens.add({targets:sp,angle:9,duration:1130+idx*160,ease:'Sine.easeInOut',yoyo:true,repeat:-1});
+      })(pi,lvPrev[pi]);
     }
-    // Первая пара движется синхронно, чтобы визуально оставаться одинаковой.
-    self.tweens.add({targets:previewSprites.slice(0,2),y:H*0.375-12,duration:830,ease:'Sine.easeInOut',yoyo:true,repeat:-1});
-    self.tweens.add({targets:previewSprites.slice(0,2),angle:9,duration:1130,ease:'Sine.easeInOut',yoyo:true,repeat:-1});
     this.add.text(cx,H*0.546,t('best')+': '+Storage.data.bestScore,{fontSize:'22px',color:'#FFD700',fontFamily:'Arial,sans-serif',stroke:'#664400',strokeThickness:2}).setOrigin(0.5);
     this.add.text(cx,H*0.588,t('formsOpened')+': '+Storage.data.formsOpened.length+'/'+MAX_LEVEL,{fontSize:'16px',color:'#AACCFF',fontFamily:'Arial,sans-serif'}).setOrigin(0.5);
     mkBtn(this,cx,H*0.675,t('play'),250,64,0xFF3399,0xCC1177,function(){AudioSystem.click();self.scene.start('GameScene');});
@@ -343,7 +338,7 @@ var GameScene=new Phaser.Class({
     this._spawnShape(true,openingLevel,openingFace,{r:0,c:1},openingTexture,true);
     // Жёстко фиксируем именно первые два созданных объекта: один уровень,
     // один вариант лица и одна общая текстура. Проверка после стартовых tween.
-    this._openingPair=this._shapes.slice(0,2);
+    this._openingPair=[this._grid[0][0],this._grid[0][1]];
     var lockOpeningPair=function(){
       if(!self.scene.isActive('GameScene')||!self._openingPair||self._openingPair.length!==2)return;
       self._openingPair.forEach(function(sp){
