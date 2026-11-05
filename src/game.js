@@ -341,8 +341,15 @@ var GameScene=new Phaser.Class({
       if(!self.scene.isActive('GameScene')||!self._openingPair||self._openingPair.length!==2)return;
       self._openingPair.forEach(function(sp){
         if(!sp||!sp.active)return;
+        self.tweens.killTweensOf(sp);
         sp.level=openingLevel;sp.faceVariant=openingFace;
-        sp.setTexture(openingTexture);sp.setAngle(0);sp.setTint(0xffffff);
+        sp.setTexture(openingTexture);
+        sp.setOrigin(0.5,0.5);
+        sp.setAngle(0);sp.setRotation(0);
+        sp.setScale(1,1);sp.setAlpha(1);
+        sp.setTint(0xffffff);sp.clearTint();
+        sp.setFlip(false,false);
+        sp.setBlendMode(Phaser.BlendModes.NORMAL);
       });
     };
     lockOpeningPair();
@@ -390,8 +397,14 @@ var GameScene=new Phaser.Class({
     sp.level=lvl;sp.faceVariant=fv;sp.gridRow=cell.r;sp.gridCol=cell.c;sp.alive=true;sp.setDepth(1);
     this._grid[cell.r][cell.c]=sp;this._shapes.push(sp);
     var self=this;
-    if(instant){sp.setScale(0.6);this.tweens.add({targets:sp,scaleX:1.08,scaleY:1.08,duration:60,ease:'Power2',onComplete:function(){if(sp&&sp.active)self.tweens.add({targets:sp,scaleX:1,scaleY:1,duration:45});}});}
-    else{sp.setScale(0);sp.y=pos.y-28;this.tweens.add({targets:sp,y:pos.y,scaleX:1,scaleY:1,duration:130,ease:'Back.easeOut'});}
+    if(noIdle){
+      // Стартовая пара появляется сразу в одном и том же визуальном состоянии.
+      sp.setScale(1,1);sp.setAlpha(1);sp.setAngle(0);sp.setTint(0xffffff);
+    }else if(instant){
+      sp.setScale(0.6);this.tweens.add({targets:sp,scaleX:1.08,scaleY:1.08,duration:60,ease:'Power2',onComplete:function(){if(sp&&sp.active)self.tweens.add({targets:sp,scaleX:1,scaleY:1,duration:45});}});
+    }else{
+      sp.setScale(0);sp.y=pos.y-28;this.tweens.add({targets:sp,y:pos.y,scaleX:1,scaleY:1,duration:130,ease:'Back.easeOut'});
+    }
     if(!noIdle)this._idleAnim(sp);this._scheduleCheck();this._updateMusic();
   },
   _autoSpawn:function(){if(!this._paused&&!this._offerActive&&!this._goTriggered&&!this._merging&&this.scene.isActive('GameScene'))this._spawnShape(false);},
