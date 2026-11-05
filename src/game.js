@@ -180,7 +180,7 @@ var BootScene=new Phaser.Class({Extends:Phaser.Scene,initialize:function BootSce
     if(typeof YaGames!=='undefined'&&YaGames){
       YaGames.init().then(function(sdk){
         window.ysdk=sdk;
-        Storage.initPlayer(sdk);
+        Storage.initPlayer(sdk).then(function(){_audioInit();});
         try{
           var ln=(sdk.environment&&sdk.environment.i18n&&sdk.environment.i18n&&sdk.environment.i18n.lang)||window.currentLang;
           window.currentLang=ln.toLowerCase().startsWith('ru')?'ru':'en';
@@ -329,8 +329,8 @@ var GameScene=new Phaser.Class({
     this.events.once(Phaser.Scenes.Events.SHUTDOWN,this.shutdown,this);
     this.scene.launch('UIScene');
     this._pauseAt=0;
-    this.events.on('pause',function(){self._paused=true;self._pauseAt=Date.now();});
-    this.events.on('resume',function(){if(self._pauseAt){self._t0+=Date.now()-self._pauseAt;self._pauseAt=0;}self._paused=false;});
+    this.events.on('pause',function(){self._paused=true;});
+    this.events.on('resume',function(){self._paused=false;});
     updateRightPanel(0);
     this.time.delayedCall(50,function(){if(!self.scene.isActive('GameScene'))return;self.registry.set('score',self._resumeState?self._resumeState.score:0);self.registry.set('isPaused',false);self.registry.set('phase',self._resumeState?self._resumeState.phase:0);});
     // В начале поля видна только гарантированно одинаковая пара.
@@ -372,8 +372,8 @@ var GameScene=new Phaser.Class({
     this._updateMusic();
     this._spawnEv=this.time.addEvent({delay:SPAWN_BASE,callback:this._autoSpawn,callbackScope:this,loop:true});
     this._tickEv=this.time.addEvent({delay:1000,callback:this._tick,callbackScope:this,loop:true});
-    this._t0=this.time.now;
-    MusicSystem.start();MusicSystem.setFill(5,GRID_COLS*GRID_ROWS);
+    if(!this._resumeState)this._t0=this.time.now;
+    MusicSystem.start();MusicSystem.setFill(this._shapes.length,GRID_COLS*GRID_ROWS);
     Banner.show();
     _ysStart();
     if(Storage.data.firstRun){Storage.data.firstRun=false;Storage.save();this.time.delayedCall(300,function(){if(self.scene.isActive('GameScene'))self._tut();});}
