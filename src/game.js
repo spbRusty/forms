@@ -11,6 +11,7 @@ document.addEventListener('contextmenu',function(e){e.preventDefault();return fa
 document.body.oncontextmenu=function(){return false;};
 document.addEventListener('selectstart',function(e){e.preventDefault();return false;});
 document.addEventListener('touchstart',function(e){if(e.touches.length>1)e.preventDefault();},{passive:false});
+window.addEventListener('pagehide',function(){try{var gs=window.game&&window.game.scene&&window.game.scene.getScene('GameScene');if(gs&&gs.scene.isActive())Storage.updateBest(gs._score||0);Storage.save();}catch(_){}});
 
 const Phaser = globalThis.Phaser;
 const AudioSystem = globalThis.AudioSystem;
