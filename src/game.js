@@ -15,6 +15,16 @@ window.addEventListener('pagehide',function(){try{var gs=window.game&&window.gam
 
 const Phaser = globalThis.Phaser;
 const AudioSystem = globalThis.AudioSystem;
+
+// Полностью сбрасывает состояние предыдущей партии перед новым запуском.
+function _startFreshGame(scene){
+  window._lastRunSnapshot=null;
+  window._rewardedClearUpper=false;
+  window._secondChanceUsed=false;
+  if(scene.scene.isActive('GameScene'))scene.scene.stop('GameScene');
+  if(scene.scene.isActive('UIScene'))scene.scene.stop('UIScene');
+  scene.scene.start('GameScene',{freshRun:true,resumeState:null});
+}
 window.currentLang='ru';window.ysdk=null;window.deathCount=0;
 (function(){try{var nl=navigator.language||'ru';window.currentLang=nl.toLowerCase().startsWith('ru')?'ru':'en';}catch(_){}})();
 function _updatePageTitle(){document.title=t('pageTitle');}
@@ -237,7 +247,7 @@ var MenuScene=new Phaser.Class({Extends:Phaser.Scene,initialize:function MenuSce
     }
     this.add.text(cx,H*0.546,t('best')+': '+Storage.data.bestScore,{fontSize:'22px',color:'#FFD700',fontFamily:'Arial,sans-serif',stroke:'#664400',strokeThickness:2}).setOrigin(0.5);
     this.add.text(cx,H*0.588,t('formsOpened')+': '+Storage.data.formsOpened.length+'/'+MAX_LEVEL,{fontSize:'16px',color:'#AACCFF',fontFamily:'Arial,sans-serif'}).setOrigin(0.5);
-    mkBtn(this,cx,H*0.675,t('play'),250,64,0xFF3399,0xCC1177,function(){AudioSystem.click();self.scene.start('GameScene');});
+    mkBtn(this,cx,H*0.675,t('play'),250,64,0xFF3399,0xCC1177,function(){AudioSystem.click();_startFreshGame(self);});
     mkBtn(this,cx,H*0.765,t('leaderboard'),230,44,0x2266AA,0x174477,function(){AudioSystem.click();self._openLeaderboard();});
     var bottomY = H - 40;
     var lbtn=this.add.text(W/2-90,bottomY,t('langBtn'),{fontSize:'22px',fontStyle:'bold',color:'#AAFFCC',stroke:'#003322',strokeThickness:2,fontFamily:'Arial Black,Arial,sans-serif'}).setOrigin(0.5).setInteractive({useHandCursor:true});
@@ -869,8 +879,8 @@ var GameOverScene=new Phaser.Class({Extends:Phaser.Scene,initialize:function Gam
     }
     mkBtn(this,cx,buttonBase,t('again'),270,48,0xFF3399,0xCC1177,function(){
       AudioSystem.click();
-      if(window.deathCount>=INTER_THRESHOLD){window.deathCount=0;Ads.inter(function(){self.scene.start('GameScene');});}
-      else self.scene.start('GameScene');
+      if(window.deathCount>=INTER_THRESHOLD){window.deathCount=0;Ads.inter(function(){_startFreshGame(self);});}
+      else _startFreshGame(self);
     });
     mkBtn(this,cx,buttonBase+54,t('menu'),230,44,0x5533BB,0x3322AA,function(){
       AudioSystem.click();
