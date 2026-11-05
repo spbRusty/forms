@@ -353,7 +353,7 @@ var GameScene=new Phaser.Class({
     this._tickEv=this.time.addEvent({delay:1000,callback:this._tick,callbackScope:this,loop:true});
     this._t0=Date.now();
     MusicSystem.start();MusicSystem.setFill(5,GRID_COLS*GRID_ROWS);
-    Banner.hide();
+    Banner.show();
     _ysStart();
     if(Storage.data.firstRun){Storage.data.firstRun=false;Storage.save();this.time.delayedCall(300,function(){if(self.scene.isActive('GameScene'))self._tut();});}
     if(window._rewardedClearHalf){window._rewardedClearHalf=false;var _self=this;this.time.delayedCall(400,function(){if(_self.scene.isActive('GameScene'))_self._doClearHalf();});}
@@ -488,6 +488,10 @@ var GameScene=new Phaser.Class({
       AudioSystem.combo();
       this._floatTxt(pos.x,pos.y-58,t('combo')+' ×'+this._combo+'  +'+comboBonus,0xFFDD00);
     }
+    if(this._combo>=3&&this._combo%3===0){
+      this._fireworks();
+      AudioSystem.playFireworks();
+    }
     this._praiseProgress++;
     if(this._praiseProgress>=this._nextPraise){
       this._praiseProgress=0;
@@ -513,8 +517,46 @@ var GameScene=new Phaser.Class({
       if(el>=tot&&g&&g.active)g.destroy();
     }});
   },
+  _fireworks:function(){
+    if(!this.scene.isActive('GameScene')||this._paused)return;
+    var self=this,colors=[0xFF4D9D,0xFFE45C,0x62E8FF,0xA78BFA,0x7CFF9B,0xFFFFFF];
+    var particles=[];
+    // Несколько залпов одновременно по всей площади игрового поля.
+    var centers=[
+      {x:GAME_WIDTH*0.16,y:GAME_HEIGHT*0.23},
+      {x:GAME_WIDTH*0.50,y:GAME_HEIGHT*0.18},
+      {x:GAME_WIDTH*0.84,y:GAME_HEIGHT*0.27},
+      {x:GAME_WIDTH*0.28,y:GAME_HEIGHT*0.63},
+      {x:GAME_WIDTH*0.73,y:GAME_HEIGHT*0.67}
+    ];
+    centers.forEach(function(center,bi){
+      var cx=center.x+(Math.random()-0.5)*30,cy=center.y+(Math.random()-0.5)*24;
+      var count=bi<3?20:16,color=colors[Phaser.Math.Between(0,colors.length-1)];
+      for(var i=0;i<count;i++){
+        var angle=Math.PI*2*i/count+(Math.random()-0.5)*0.18;
+        var speed=75+Math.random()*125;
+        particles.push({x:cx,y:cy,vx:Math.cos(angle)*speed,vy:Math.sin(angle)*speed,
+          life:650+Math.random()*300,max:950,size:1.8+Math.random()*2.4,color:color});
+      }
+    });
+    var gfx=this.add.graphics().setDepth(420),elapsed=0;
+    var ev=this.time.addEvent({delay:16,loop:true,callback:function(){
+      if(!gfx.active||!self.scene.isActive('GameScene')){ev.remove();if(gfx.active)gfx.destroy();return;}
+      elapsed+=16;gfx.clear();
+      particles.forEach(function(p){
+        if(p.life<=0)return;
+        p.life-=16;p.x+=p.vx*0.016;p.y+=p.vy*0.016;
+        p.vx*=0.992;p.vy=p.vy*0.992+48*0.016;
+        var alpha=Math.max(0,p.life/Math.min(p.max,950));
+        gfx.fillStyle(p.color,alpha);
+        gfx.fillCircle(p.x,p.y,p.size*alpha);
+      });
+      if(elapsed>=1050){ev.remove();if(gfx.active)gfx.destroy();}
+    }});
+  },
   _celebrateFaces:function(){
     var self=this;
+    AudioSystem.playAwe();
     this._shapes.forEach(function(sp){
       if(!sp||!sp.active||!sp.alive)return;
       var original=sp.faceVariant,token=(sp._celebrateToken||0)+1;sp._celebrateToken=token;
