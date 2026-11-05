@@ -27,7 +27,7 @@ function _adPause(){MusicSystem.pause();_ysStop();}
 function _adResume(){AudioSystem.resume();MusicSystem.resume();}
 
 function isDesktopDevice(){
-  if(localStorage.getItem('forceDesktop')==='true')return true;
+  try{if(localStorage.getItem('forceDesktop')==='true')return true;}catch(e){}
   try{if(typeof navigator.maxTouchPoints==='number'&&navigator.maxTouchPoints>1)return false;}catch(e){}
   if(/Mobi|Android|iPhone|iPad|iPod|BlackBerry|Windows Phone/i.test(navigator.userAgent))return false;
   if(window.innerWidth>=820)return true;
@@ -50,7 +50,8 @@ function switchLang(){
 // Инициализация после загрузки Storage
 function _audioInit(){
   AudioSystem.init();
-  AudioSystem.setSoundEnabled(Storage.data.soundOn !== false);
+  _soundOn = Storage.data.soundOn !== false;
+  AudioSystem.setSoundEnabled(_soundOn);
   AudioSystem.setMusicEnabled(Storage.data.musicOn !== false);
   MusicSystem._on = Storage.data.musicOn !== false;
 }
@@ -63,7 +64,7 @@ AudioSystem.newForm  = AudioSystem.playLapComplete;
 AudioSystem.ding     = AudioSystem.playJump;
 AudioSystem.over     = AudioSystem.playDeath;
 AudioSystem.nearMiss = function(){};
-var _soundOn = true;
+var _soundOn = Storage.data.soundOn !== false;
 AudioSystem.isEnabled = function(){ return _soundOn; };
 AudioSystem.toggle    = function(){
   _soundOn = !_soundOn;
@@ -170,8 +171,10 @@ var BootScene=new Phaser.Class({Extends:Phaser.Scene,initialize:function BootSce
     this.add.text(GAME_WIDTH/2,GAME_HEIGHT/2,t('loading'),{fontSize:'28px',fontStyle:'bold',color:'#cc88ff',fontFamily:'Arial Black,Arial,sans-serif',stroke:'#330066',strokeThickness:3}).setOrigin(0.5);
     document.addEventListener('visibilitychange',function(){
       if(document.hidden){_adPause();}
-      else{_adResume();_ysStartIfGame();}
+      else{AudioSystem.resume();if(window.game&&window.game.scene&&window.game.scene.isActive('GameScene')){MusicSystem.resume();_ysStartIfGame();}}
     });
+    document.addEventListener('pointerdown',function(){AudioSystem.resume();},{once:true,passive:true});
+    document.addEventListener('touchstart',function(){AudioSystem.resume();},{once:true,passive:true});
     window._loadingTimeout=setTimeout(function(){var el=document.getElementById('err');if(el)el.textContent=t('loadingError');},90000);
     var _finish=function(){Storage.load();Storage.addForm(1);_audioInit();_updatePageTitle();self.scene.start('MenuScene');};
     if(typeof YaGames!=='undefined'&&YaGames){
@@ -308,7 +311,7 @@ var GameScene=new Phaser.Class({
     this._phase=0;this._paused=false;
     this._spawnEv=null;this._tickEv=null;this._t0=0;
     this._offerActive=false;this._offerItems=[];
-    this._goTriggered=false;this._merging=false;
+    this._goTriggered=false;this._merging=false;this._tutorialActive=false;
     this._checkPending=false;
   },
   create:function(){
@@ -322,6 +325,7 @@ var GameScene=new Phaser.Class({
     this.input.on('pointerdown',this._pd,this);
     this.input.on('pointermove',this._pm,this);
     this.input.on('pointerup',this._pu,this);
+    this.events.once(Phaser.Scenes.Events.SHUTDOWN,this.shutdown,this);
     this.scene.launch('UIScene');
     this._pauseAt=0;
     this.events.on('pause',function(){self._paused=true;self._pauseAt=Date.now();});
@@ -347,59 +351,18 @@ var GameScene=new Phaser.Class({
     }
     this._openingPair=openingPair;
     this._updateMusic();
-    var lockOpeningPair=function(){
-      if(!self.scene.isActive('GameScene')||!self._openingPair||self._openingPair.length!==2)return;
-      self._openingPair.forEach(function(sp){
-        if(!sp||!sp.active)return;
-        self.tweens.killTweensOf(sp);
-        sp.level=openingLevel;sp.faceVariant=openingFace;
-        sp.setTexture(openingTexture);
-        sp.setOrigin(0.5,0.5);
-        sp.setAngle(0);sp.setRotation(0);
-        sp.setScale(1,1);sp.setAlpha(1);
-        sp.setTint(0xffffff);sp.clearTint();
-        sp.setFlip(false,false);
-        sp.setBlendMode(Phaser.BlendModes.NORMAL);
-      });
-    };
-    lockOpeningPair();
-    [100,350,800,1500].forEach(function(ms){
-      self.time.delayedCall(ms,lockOpeningPair);
-    });
-    // Инвариант стартовой пары: даже если другой игровой эффект случайно
-    // изменит один спрайт, каждый кадр возвращаем обоим одну и ту же графику.
-    this._openingTexture=openingTexture;
-    this._openingLevel=openingLevel;
-    this._openingFace=openingFace;
+    this._openingPair=openingPair;
+    this._updateMusic();
     this._spawnEv=this.time.addEvent({delay:SPAWN_BASE,callback:this._autoSpawn,callbackScope:this,loop:true});
     this._tickEv=this.time.addEvent({delay:1000,callback:this._tick,callbackScope:this,loop:true});
-    this._t0=Date.now();
+    this._t0=this.time.now;
     MusicSystem.start();MusicSystem.setFill(5,GRID_COLS*GRID_ROWS);
     Banner.show();
     _ysStart();
     if(Storage.data.firstRun){Storage.data.firstRun=false;Storage.save();this.time.delayedCall(300,function(){if(self.scene.isActive('GameScene'))self._tut();});}
     if(window._rewardedClearHalf){window._rewardedClearHalf=false;var _self=this;this.time.delayedCall(400,function(){if(_self.scene.isActive('GameScene'))_self._doClearHalf();});}
   },
-  update:function(){
-    var pair=this._openingPair;
-    if(!pair||pair.length!==2)return;
-    for(var i=0;i<2;i++){
-      var sp=pair[i];
-      if(!sp||!sp.active)continue;
-      if(sp.texture.key!==this._openingTexture)sp.setTexture(this._openingTexture);
-      if(sp.frame.name!=='__BASE')sp.setFrame('__BASE');
-      if(sp.level!==this._openingLevel)sp.level=this._openingLevel;
-      if(sp.faceVariant!==this._openingFace)sp.faceVariant=this._openingFace;
-      if(sp.scaleX!==1||sp.scaleY!==1)sp.setScale(1,1);
-      if(sp.angle!==0)sp.setAngle(0);
-      if(sp.alpha!==1)sp.setAlpha(1);
-      if(sp.tintTopLeft!==0xffffff||sp.tintTopRight!==0xffffff||sp.tintBottomLeft!==0xffffff||sp.tintBottomRight!==0xffffff)sp.clearTint();
-      if(sp.flipX||sp.flipY)sp.setFlip(false,false);
-      if(sp.blendMode!==Phaser.BlendModes.NORMAL)sp.setBlendMode(Phaser.BlendModes.NORMAL);
-      if(sp.isCropped)sp.setCrop();
-      if(sp.mask)sp.clearMask(false);
-    }
-  },
+  update:function(){},
   _drawBg:function(){
     if(!this._bgGfx||!this._bgGfx.active)return;
     var g=this._bgGfx;g.clear();
@@ -442,20 +405,21 @@ var GameScene=new Phaser.Class({
     }
     if(!noIdle)this._idleAnim(sp);this._scheduleCheck();this._updateMusic();
   },
-  _autoSpawn:function(){if(!this._paused&&!this._offerActive&&!this._goTriggered&&!this._merging&&this.scene.isActive('GameScene'))this._spawnShape(false);},
+  _autoSpawn:function(){if(!this._paused&&!this._tutorialActive&&!this._offerActive&&!this._goTriggered&&!this._merging&&this.scene.isActive('GameScene'))this._spawnShape(false);},
   _scheduleCheck:function(){
     if(this._checkPending||this._goTriggered||this._offerActive)return;
     this._checkPending=true;var self=this;
     this.time.delayedCall(120,function(){self._checkPending=false;if(self.scene.isActive('GameScene')&&!self._goTriggered&&!self._offerActive)self._doCheck();});
   },
   _doCheck:function(){
-    if(this._goTriggered||!this.scene.isActive('GameScene'))return;
+    if(this._goTriggered||this._offerActive||!this.scene.isActive('GameScene'))return;
     for(var r=0;r<this._rows;r++)for(var c=0;c<this._cols;c++)if(this._grid[r][c]===null)return;
-    this._triggerGO();
+    var seen={};for(var rr=0;rr<this._rows;rr++)for(var cc=0;cc<this._cols;cc++){var it=this._grid[rr][cc];if(it&&typeof it==='object'){var k=String(it.level);if(seen[k])return;seen[k]=true;}}
+    this._showOffer();
   },
   _tick:function(){
     if(!this.scene.isActive('GameScene')||this._paused)return;
-    var sec=(Date.now()-this._t0)/1000,np=sec<120?0:sec<300?1:sec<480?2:sec<600?3:4;
+    var sec=(this.time.now-this._t0)/1000,np=sec<120?0:sec<300?1:sec<480?2:sec<600?3:4;
     if(np!==this._phase){this._phase=np;this._drawBg();var ni=Math.max(700,SPAWN_BASE-np*320);if(this._spawnEv)this._spawnEv.reset({delay:ni,callback:this._autoSpawn,callbackScope:this,loop:true});var self=this;this.time.delayedCall(50,function(){if(!self.scene.isActive('GameScene'))return;self.registry.set('phase',self._phase);});}
   },
   _idleAnim:function(sp){
@@ -463,7 +427,7 @@ var GameScene=new Phaser.Class({
     this.time.delayedCall(2800+Math.random()*2200,function(){if(!sp||!sp.active||!sp.alive||!self.scene.isActive('GameScene'))return;self.tweens.add({targets:sp,angle:Phaser.Math.Between(-10,10),duration:270,ease:'Sine.easeInOut',yoyo:true,onComplete:function(){if(sp&&sp.active)sp.setAngle(0);}});self._idleAnim(sp);});
   },
   _pd:function(ptr){
-    if(this._paused||this._offerActive||this._goTriggered||this._merging)return;
+    if(this._paused||this._tutorialActive||this._offerActive||this._goTriggered||this._merging)return;
     var best=null,bestD=9999;
     for(var i=0;i<this._shapes.length;i++){var sp=this._shapes[i];if(!sp||!sp.active||!sp.alive)continue;var d=Phaser.Math.Distance.Between(ptr.x,ptr.y,sp.x,sp.y);if(d<this._cs*0.56&&d<bestD){bestD=d;best=sp;}}
     if(!best)return;
@@ -524,7 +488,7 @@ var GameScene=new Phaser.Class({
     this._burst(pos.x,pos.y,colorForLevel(lvl),lvl);
     try{navigator.vibrate(18+lvl*3);}catch(_){}
     AudioSystem.merge(lvl);
-    this._combo++;if(this._combo>this._maxCombo)this._maxCombo=this._combo;this._mergeN++;
+    this._combo++;if(this._combo>this._maxCombo)this._maxCombo=this._combo;this._mergeN++;Storage.data.totalMerges++;Storage.save();
     var basePts=lvl*150;
     var comboMult=Math.min(4,1+0.5*(this._combo-1));
     var pts=Math.round(basePts*comboMult);
@@ -549,7 +513,7 @@ var GameScene=new Phaser.Class({
       this._celebrateFaces();
     }
     if(Storage.addForm(lvl)){AudioSystem.newForm();this._floatTxt(pos.x,pos.y-88,t('evolvedTo')+lvl+'! \u2728',0xFFDD00);unlockLpSlot(lvl);}
-    if(shapeTypeForLevel(lvl)==='square'&&Math.random()<0.01){this._floatTxt(GAME_WIDTH/2,GAME_HEIGHT/2,t('notFoundErr'),0xff0000);this.cameras.main.flash(260,180,0,60);this._score*=2;if(this.scene.isActive('GameScene'))this.registry.set('score',this._score);}
+    
     this._idleAnim(sp);
     updateRightPanel(this._mergeN);
     this._updateMusic();
@@ -725,7 +689,7 @@ var GameScene=new Phaser.Class({
     var pn=this.add.graphics().setDepth(500);pn.fillStyle(0x1A0A3E,1);pn.fillRoundedRect(mx,my,mW,mH,20);pn.lineStyle(3,0xFF8800,0.9);pn.strokeRoundedRect(mx,my,mW,mH,20);items.push(pn);
     items.push(this.add.text(cx,my+40,t('boardFull'),{fontSize:'28px',fontStyle:'bold',color:'#FF8800',fontFamily:'Arial Black,Arial,sans-serif',stroke:'#441100',strokeThickness:2}).setOrigin(0.5).setDepth(501));
     items.push(this.add.text(cx,my+80,t('clearHalf'),{fontSize:'17px',color:'#AACCFF',align:'center',wordWrap:{width:310},fontFamily:'Arial,sans-serif'}).setOrigin(0.5).setDepth(501));
-    var adItems=mkBtn(this,cx,my+148,t('watchAd'),268,54,0xFF8800,0xCC5500,function(){AudioSystem.click();self._hideOffer();Ads.rewarded(function(){self._doClearHalf();},function(){self._triggerGO();});});
+    var adItems=mkBtn(this,cx,my+148,t('watchAd'),268,54,0xFF8800,0xCC5500,function(){AudioSystem.click();self._hideOffer();var gotReward=false;Ads.rewarded(function(){gotReward=true;self._doClearHalf();},function(){if(!gotReward)self._triggerGO();});});
     adItems.forEach(function(x){x.setDepth(502);});items=items.concat(adItems);
     if(!hasSDK){var freeItems=mkBtn(this,cx,my+214,t('freeClear'),210,46,0x00AA55,0x007733,function(){AudioSystem.click();self._hideOffer();self._doClearHalf();});freeItems.forEach(function(x){x.setDepth(502);});items=items.concat(freeItems);}
     var decItems=mkBtn(this,cx,my+mH-30,t('decline'),190,42,0x881133,0x551122,function(){AudioSystem.click();self._hideOffer();self._triggerGO();});
@@ -748,7 +712,7 @@ var GameScene=new Phaser.Class({
     AudioSystem.over();
     var isNew=Storage.updateBest(this._score);
     _submitLeaderboardScore(Storage.data.bestScore);
-    Storage.data.totalMerges+=this._mergeN;Storage.save();
+    Storage.save();
     updateRightPanel(Storage.data.totalMerges);
     window.deathCount++;
     this.cameras.main.shake(320,0.03);
@@ -757,15 +721,17 @@ var GameScene=new Phaser.Class({
   },
   _tut:function(){
     var self=this,W=GAME_WIDTH,H=GAME_HEIGHT;
+    this._tutorialActive=true;
     var ov=this.add.graphics().setDepth(600);ov.fillStyle(0x000000,0.82);ov.fillRect(0,0,W,H);
     var t1=this.add.text(W/2,H/2-30,t('tutorial'),{fontSize:'23px',color:'#ffffff',align:'center',wordWrap:{width:320},fontFamily:'Arial,sans-serif',stroke:'#ffffff',strokeThickness:3}).setOrigin(0.5).setDepth(601);
     var arrow=this.add.text(W/2,H/2+55,'\ud83d\udc46 '+t('hint'),{fontSize:'26px',color:'#FF4466',fontFamily:'Arial,sans-serif',stroke:'#ffffff',strokeThickness:2}).setOrigin(0.5).setDepth(601);
     this.tweens.add({targets:arrow,y:H/2+65,duration:560,ease:'Sine.easeInOut',yoyo:true,repeat:-1});
     var btn=this.add.text(W/2,H/2+120,t('tapStart'),{fontSize:'26px',fontStyle:'bold',color:'#FFD700',stroke:'#ffffff',strokeThickness:3,fontFamily:'Arial Black,Arial,sans-serif'}).setOrigin(0.5).setDepth(601).setInteractive({useHandCursor:true});
     this.tweens.add({targets:btn,alpha:0.5,duration:490,ease:'Sine.easeInOut',yoyo:true,repeat:-1});
-    btn.once('pointerdown',function(){AudioSystem.click();[ov,t1,arrow,btn].forEach(function(x){if(x&&x.active)x.destroy();});});
+    btn.once('pointerdown',function(){AudioSystem.click();self._tutorialActive=false;[ov,t1,arrow,btn].forEach(function(x){if(x&&x.active)x.destroy();});});
   },
   shutdown:function(){
+    if(this._score>0)Storage.updateBest(this._score);
     this.input.off('pointerdown',this._pd,this);this.input.off('pointermove',this._pm,this);this.input.off('pointerup',this._pu,this);
     if(this._spawnEv){this._spawnEv.remove();this._spawnEv=null;}if(this._tickEv){this._tickEv.remove();this._tickEv=null;}
     if(this.time)this.time.timeScale=1;MusicSystem.stop();
@@ -797,6 +763,7 @@ var UIScene=new Phaser.Class({Extends:Phaser.Scene,initialize:function UIScene()
       }
     };
     this.registry.events.on('changedata',this._oCh);
+    this.events.once(Phaser.Scenes.Events.SHUTDOWN,this.shutdown,this);
   },
   _showPause:function(){
     if(this._pov)return;var self=this,W=GAME_WIDTH,H=GAME_HEIGHT;
@@ -857,7 +824,7 @@ var GameOverScene=new Phaser.Class({Extends:Phaser.Scene,initialize:function Gam
     var buttonBase=pY+pH-126;
     mkBtn(this,cx,buttonBase-52,t('continuead'),292,42,0xFF8800,0xCC5500,function(){
       AudioSystem.click();
-      Ads.rewarded(function(){window._rewardedClearHalf=true;self.scene.start('GameScene');},function(){});
+      Ads.rewarded(function(){self.scene.start('GameScene');},function(){});
     });
     mkBtn(this,cx,buttonBase,t('again'),270,48,0xFF3399,0xCC1177,function(){
       AudioSystem.click();
