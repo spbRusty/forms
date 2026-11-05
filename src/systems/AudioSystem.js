@@ -147,10 +147,7 @@ var AudioSystem = (function () {
       _playBassPooled(BASS[chordIndex], time);
     }
 
-    // Редкие тихие акценты вместо постоянных звенящих пингов.
-    if (step === 15 || step === 31) {
-      _playNotePooled(SCALE[4] * 2, time + 0.12, 0.32, 0.022);
-    }
+    // Дополнительные акценты отключены: мелодия звучит одной чистой линией.
     noteIndex++;
   }
 
