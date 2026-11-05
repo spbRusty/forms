@@ -356,6 +356,11 @@ var GameScene=new Phaser.Class({
     [100,350,800,1500].forEach(function(ms){
       self.time.delayedCall(ms,lockOpeningPair);
     });
+    // Инвариант стартовой пары: даже если другой игровой эффект случайно
+    // изменит один спрайт, каждый кадр возвращаем обоим одну и ту же графику.
+    this._openingTexture=openingTexture;
+    this._openingLevel=openingLevel;
+    this._openingFace=openingFace;
     this._spawnEv=this.time.addEvent({delay:SPAWN_BASE,callback:this._autoSpawn,callbackScope:this,loop:true});
     this._tickEv=this.time.addEvent({delay:1000,callback:this._tick,callbackScope:this,loop:true});
     this._t0=Date.now();
@@ -364,6 +369,26 @@ var GameScene=new Phaser.Class({
     _ysStart();
     if(Storage.data.firstRun){Storage.data.firstRun=false;Storage.save();this.time.delayedCall(300,function(){if(self.scene.isActive('GameScene'))self._tut();});}
     if(window._rewardedClearHalf){window._rewardedClearHalf=false;var _self=this;this.time.delayedCall(400,function(){if(_self.scene.isActive('GameScene'))_self._doClearHalf();});}
+  },
+  update:function(){
+    var pair=this._openingPair;
+    if(!pair||pair.length!==2)return;
+    for(var i=0;i<2;i++){
+      var sp=pair[i];
+      if(!sp||!sp.active)continue;
+      if(sp.texture.key!==this._openingTexture)sp.setTexture(this._openingTexture);
+      if(sp.frame.name!=='__BASE')sp.setFrame('__BASE');
+      if(sp.level!==this._openingLevel)sp.level=this._openingLevel;
+      if(sp.faceVariant!==this._openingFace)sp.faceVariant=this._openingFace;
+      if(sp.scaleX!==1||sp.scaleY!==1)sp.setScale(1,1);
+      if(sp.angle!==0)sp.setAngle(0);
+      if(sp.alpha!==1)sp.setAlpha(1);
+      if(sp.tintTopLeft!==0xffffff||sp.tintTopRight!==0xffffff||sp.tintBottomLeft!==0xffffff||sp.tintBottomRight!==0xffffff)sp.clearTint();
+      if(sp.flipX||sp.flipY)sp.setFlip(false,false);
+      if(sp.blendMode!==Phaser.BlendModes.NORMAL)sp.setBlendMode(Phaser.BlendModes.NORMAL);
+      if(sp.isCropped)sp.setCrop();
+      if(sp.mask)sp.clearMask(false);
+    }
   },
   _drawBg:function(){
     if(!this._bgGfx||!this._bgGfx.active)return;
