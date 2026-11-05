@@ -307,6 +307,56 @@ var AudioSystem = (function () {
     osc2.start(now); osc2.stop(now + 0.25);
   }
 
+  function playAwe () {
+    if (!_sfxAllowed()) return;
+    const now = ctx.currentTime;
+    // Мягкое восходящее созвучие — реакция фигурок на общую радость.
+    [392, 493.88, 587.33, 783.99].forEach((freq, i) => {
+      const t = now + i * 0.075;
+      const osc = ctx.createOscillator();
+      const gain = ctx.createGain();
+      osc.type = 'sine';
+      osc.frequency.setValueAtTime(freq * 0.92, t);
+      osc.frequency.exponentialRampToValueAtTime(freq, t + 0.11);
+      gain.gain.setValueAtTime(0.0001, t);
+      gain.gain.exponentialRampToValueAtTime(0.052, t + 0.035);
+      gain.gain.exponentialRampToValueAtTime(0.0001, t + 0.42);
+      osc.connect(gain); gain.connect(master);
+      osc.start(t); osc.stop(t + 0.44);
+    });
+  }
+
+  function playFireworks () {
+    if (!_sfxAllowed()) return;
+    const now = ctx.currentTime;
+    // Несколько коротких хлопков разной высоты, затем лёгкий звон искр.
+    [0, 0.16, 0.34].forEach((delay, i) => {
+      const t = now + delay;
+      const osc = ctx.createOscillator();
+      const gain = ctx.createGain();
+      osc.type = 'triangle';
+      osc.frequency.setValueAtTime(180 + i * 35, t);
+      osc.frequency.exponentialRampToValueAtTime(720 + i * 110, t + 0.055);
+      osc.frequency.exponentialRampToValueAtTime(260 + i * 25, t + 0.19);
+      gain.gain.setValueAtTime(0.0001, t);
+      gain.gain.exponentialRampToValueAtTime(0.105, t + 0.012);
+      gain.gain.exponentialRampToValueAtTime(0.0001, t + 0.23);
+      osc.connect(gain); gain.connect(master);
+      osc.start(t); osc.stop(t + 0.24);
+    });
+    [880, 1174.66, 1396.91].forEach((freq, i) => {
+      const t = now + 0.25 + i * 0.045;
+      const osc = ctx.createOscillator();
+      const gain = ctx.createGain();
+      osc.type = 'sine'; osc.frequency.value = freq;
+      gain.gain.setValueAtTime(0.0001, t);
+      gain.gain.exponentialRampToValueAtTime(0.026, t + 0.025);
+      gain.gain.exponentialRampToValueAtTime(0.0001, t + 0.34);
+      osc.connect(gain); gain.connect(master);
+      osc.start(t); osc.stop(t + 0.35);
+    });
+  }
+
   function playLapComplete () {
     if (!_sfxAllowed()) return;
     [523, 659, 784, 1047].forEach((freq, i) => {
@@ -396,7 +446,7 @@ var AudioSystem = (function () {
     playJump,
     playClick,
     playDeath,
-    playLapComplete,
+    playLapComplete,\n    playAwe,\n    playFireworks,
 
     // управление
     setIntensity,
