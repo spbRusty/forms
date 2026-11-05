@@ -434,9 +434,23 @@ var GameScene=new Phaser.Class({
     this.time.delayedCall(120,function(){self._checkPending=false;if(self.scene.isActive('GameScene')&&!self._goTriggered&&!self._offerActive)self._doCheck();});
   },
   _doCheck:function(){
-    if(this._goTriggered||this._offerActive||!this.scene.isActive('GameScene'))return;
-    for(var r=0;r<this._rows;r++)for(var c=0;c<this._cols;c++)if(this._grid[r][c]===null)return;
-    var seen={};for(var rr=0;rr<this._rows;rr++)for(var cc=0;cc<this._cols;cc++){var it=this._grid[rr][cc];if(it&&typeof it==='object'){var k=String(it.level);if(seen[k])return;seen[k]=true;}}
+    if(this._goTriggered||this._offerActive||this._merging||!this.scene.isActive('GameScene'))return;
+    // Поле должно быть действительно заполнено фигурами, а не временными маркерами слияния.
+    for(var r=0;r<this._rows;r++)for(var c=0;c<this._cols;c++){
+      var cell=this._grid[r][c];
+      if(!cell||cell==='_')return;
+    }
+    // Продолжать игру можно только если существует реальная пара для слияния:
+    // одинаковый уровень и расстояние между фигурами меньше радиуса срабатывания.
+    for(var i=0;i<this._shapes.length;i++){
+      var a=this._shapes[i];
+      if(!a||!a.active||!a.alive)continue;
+      for(var j=i+1;j<this._shapes.length;j++){
+        var b=this._shapes[j];
+        if(!b||!b.active||!b.alive||a.level!==b.level)continue;
+        if(Phaser.Math.Distance.Between(a.x,a.y,b.x,b.y)<this._cs*0.82)return;
+      }
+    }
     this._triggerGO();
   },
   _tick:function(){
@@ -485,7 +499,7 @@ var GameScene=new Phaser.Class({
       this._grid[sp.gridRow][sp.gridCol]=null;this._grid[tc.r][tc.c]=sp;sp.gridRow=tc.r;sp.gridCol=tc.c;
       var np2=this._c2w(tc.r,tc.c);this.tweens.add({targets:sp,x:np2.x,y:np2.y,scaleX:1,scaleY:1,duration:140});
     }else{var op=this._c2w(sp.gridRow,sp.gridCol);this.tweens.add({targets:sp,x:op.x,y:op.y,scaleX:1,scaleY:1,duration:200,ease:'Back.easeOut'});}
-    sp.setDepth(1);this._combo=0;
+    sp.setDepth(1);this._combo=0;this._scheduleCheck();
   },
   _merge:function(a,b){
     if(this._merging||!a||!b||a===b||!a.alive||!b.alive)return;
