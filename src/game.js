@@ -437,7 +437,7 @@ var GameScene=new Phaser.Class({
     if(this._goTriggered||this._offerActive||!this.scene.isActive('GameScene'))return;
     for(var r=0;r<this._rows;r++)for(var c=0;c<this._cols;c++)if(this._grid[r][c]===null)return;
     var seen={};for(var rr=0;rr<this._rows;rr++)for(var cc=0;cc<this._cols;cc++){var it=this._grid[rr][cc];if(it&&typeof it==='object'){var k=String(it.level);if(seen[k])return;seen[k]=true;}}
-    this._showOffer();
+    this._triggerGO();
   },
   _tick:function(){
     if(!this.scene.isActive('GameScene')||this._paused)return;
