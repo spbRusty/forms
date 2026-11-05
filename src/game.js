@@ -292,7 +292,8 @@ var GameScene=new Phaser.Class({
     this.events.on('resume',function(){if(self._pauseAt){self._t0+=Date.now()-self._pauseAt;self._pauseAt=0;}self._paused=false;});
     updateRightPanel(0);
     this.time.delayedCall(50,function(){if(!self.scene.isActive('GameScene'))return;self.registry.set('score',0);self.registry.set('isPaused',false);self.registry.set('phase',0);});
-    for(var n=0;n<5;n++)this._spawnShape(true);
+    var openingLevel=this._lvForPhase(),openingFace=randomFace();
+    for(var n=0;n<5;n++)this._spawnShape(true,n<2?openingLevel:undefined,n<2?openingFace:undefined);
     this._spawnEv=this.time.addEvent({delay:SPAWN_BASE,callback:this._autoSpawn,callbackScope:this,loop:true});
     this._tickEv=this.time.addEvent({delay:1000,callback:this._tick,callbackScope:this,loop:true});
     this._t0=Date.now();
@@ -324,10 +325,11 @@ var GameScene=new Phaser.Class({
   _empty:function(){var a=[];for(var r=0;r<this._rows;r++)for(var c=0;c<this._cols;c++)if(this._grid[r][c]===null)a.push({r:r,c:c});if(!a.length)return null;return a[Math.floor(Math.random()*a.length)];},
   _lvForPhase:function(){var maxU=Storage.maxUnlocked();var cap=this._phase===0?Math.max(1,maxU):Math.min(Math.max(maxU,this._phase+1),MAX_LEVEL);return Phaser.Math.Between(1,cap);},
   _updateMusic:function(){var filled=0;for(var r=0;r<this._rows;r++)for(var c=0;c<this._cols;c++)if(this._grid[r][c]!==null)filled++;MusicSystem.setFill(filled,this._rows*this._cols);},
-  _spawnShape:function(instant){
+  _spawnShape:function(instant,forcedLevel,forcedFace){
     if(!this.scene.isActive('GameScene'))return;
     var cell=this._empty();if(!cell){this._doCheck();return;}
-    var lvl=this._lvForPhase(),fv=randomFace(),key=buildShapeTexture(this,lvl,fv);
+    var lvl=forcedLevel!==undefined?forcedLevel:this._lvForPhase();
+    var fv=forcedFace!==undefined?forcedFace:randomFace(),key=buildShapeTexture(this,lvl,fv);
     var pos=this._c2w(cell.r,cell.c);
     var sp=this.add.sprite(pos.x,pos.y,key);
     sp.level=lvl;sp.faceVariant=fv;sp.gridRow=cell.r;sp.gridCol=cell.c;sp.alive=true;sp.setDepth(1);
