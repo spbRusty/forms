@@ -327,8 +327,11 @@ var GameScene=new Phaser.Class({
     this.events.on('resume',function(){if(self._pauseAt){self._t0+=Date.now()-self._pauseAt;self._pauseAt=0;}self._paused=false;});
     updateRightPanel(0);
     this.time.delayedCall(50,function(){if(!self.scene.isActive('GameScene'))return;self.registry.set('score',0);self.registry.set('isPaused',false);self.registry.set('phase',0);});
-    var openingLevel=this._lvForPhase(),openingFace=randomFace();
-    for(var n=0;n<5;n++)this._spawnShape(true,n<2?openingLevel:undefined,n<2?openingFace:undefined);
+    // Гарантированная стартовая пара: один уровень и одна фиксированная рожица.
+    var openingLevel=1,openingFace=0;
+    this._spawnShape(true,openingLevel,openingFace);
+    this._spawnShape(true,openingLevel,openingFace);
+    for(var n=2;n<5;n++)this._spawnShape(true);
     this._spawnEv=this.time.addEvent({delay:SPAWN_BASE,callback:this._autoSpawn,callbackScope:this,loop:true});
     this._tickEv=this.time.addEvent({delay:1000,callback:this._tick,callbackScope:this,loop:true});
     this._t0=Date.now();
