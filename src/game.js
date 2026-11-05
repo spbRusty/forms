@@ -6,7 +6,7 @@ import { mkBtn } from './ui/buttons.js';
 import { SHAPE_TYPES, LEVEL_COLORS, shapeTypeForLevel, colorForLevel, hexColor, darkenCol, drawFace, _miniStar, _miniHeart, _drawShapeOutline, buildShapeTexture, randomFace } from './graphics/Shapes.js';
 'use strict';
 window.onerror=function(m,s,l,c,e){var el=document.getElementById('err');if(el)el.textContent=(e&&e.message)||m;};
-window.onunhandledrejection=function(e){var el=document.getElementById('err');if(el)el.textContent=e.reason&&e.reason.message?e.reason.message:String(e.reason);};
+window.onunhandledrejection=function(e){console.warn('Необработанная ошибка:',e.reason);};
 document.addEventListener('contextmenu',function(e){e.preventDefault();return false;});
 document.body.oncontextmenu=function(){return false;};
 document.addEventListener('selectstart',function(e){e.preventDefault();return false;});
@@ -24,7 +24,7 @@ function _ysStartIfGame(){try{if(window.ysdk&&window.ysdk.features&&window.ysdk.
 const LEADERBOARD_ID='best_score';
 function _submitLeaderboardScore(score){try{var sdk=window.ysdk;if(!sdk||!sdk.leaderboards||!sdk.isAvailableMethod||!score)return;Promise.resolve(sdk.isAvailableMethod('leaderboards.setScore')).then(function(ok){if(ok)return sdk.leaderboards.setScore(LEADERBOARD_ID,Math.floor(score));}).catch(function(){});}catch(_){}}
 function _adPause(){MusicSystem.pause();_ysStop();}
-function _adResume(){AudioSystem.resume();MusicSystem.resume();}
+function _adResume(){AudioSystem.resume();if(window.game&&window.game.scene&&window.game.scene.isActive('GameScene'))MusicSystem.resume();}
 
 function isDesktopDevice(){
   try{if(localStorage.getItem('forceDesktop')==='true')return true;}catch(e){}
@@ -302,7 +302,8 @@ var MenuScene=new Phaser.Class({Extends:Phaser.Scene,initialize:function MenuSce
 var GameScene=new Phaser.Class({
   Extends:Phaser.Scene,
   initialize:function GameScene(){Phaser.Scene.call(this,{key:'GameScene'});},
-  init:function(){
+  init:function(data){
+    this._resumeState=data&&data.resumeState?data.resumeState:null;
     this._bgGfx=null;this._gridGfx=null;this._hlGfx=null;
     this._shapes=[];this._grid=[];
     this._drag=null;this._dox=0;this._doy=0;
@@ -331,7 +332,7 @@ var GameScene=new Phaser.Class({
     this.events.on('pause',function(){self._paused=true;self._pauseAt=Date.now();});
     this.events.on('resume',function(){if(self._pauseAt){self._t0+=Date.now()-self._pauseAt;self._pauseAt=0;}self._paused=false;});
     updateRightPanel(0);
-    this.time.delayedCall(50,function(){if(!self.scene.isActive('GameScene'))return;self.registry.set('score',0);self.registry.set('isPaused',false);self.registry.set('phase',0);});
+    this.time.delayedCall(50,function(){if(!self.scene.isActive('GameScene'))return;self.registry.set('score',self._resumeState?self._resumeState.score:0);self.registry.set('isPaused',false);self.registry.set('phase',self._resumeState?self._resumeState.phase:0);});
     // В начале поля видна только гарантированно одинаковая пара.
     // Остальные фигуры появляются обычным автоспавном позже.
     // Две стартовые фигуры игрового поля создаются напрямую из одной текстуры.
@@ -350,6 +351,22 @@ var GameScene=new Phaser.Class({
       openingPair.push(sp);
     }
     this._openingPair=openingPair;
+    if(this._resumeState&&Array.isArray(this._resumeState.cells)){
+      openingPair.forEach(function(sp){if(sp&&sp.active)sp.destroy();});
+      this._grid.forEach(function(row){row.fill(null);});
+      this._shapes=[];
+      this._resumeState.cells.forEach(function(cell){
+        if(cell.r<0||cell.r>=self._rows||cell.c<0||cell.c>=self._cols)return;
+        var p=self._c2w(cell.r,cell.c),tex=buildShapeTexture(self,cell.level,cell.face);
+        var restored=self.add.sprite(p.x,p.y,tex).setDepth(1);
+        restored.level=cell.level;restored.faceVariant=cell.face;restored.gridRow=cell.r;restored.gridCol=cell.c;restored.alive=true;
+        self._grid[cell.r][cell.c]=restored;self._shapes.push(restored);self._idleAnim(restored);
+      });
+      this._score=this._resumeState.score||0;this._mergeN=this._resumeState.mergeN||0;
+      this._maxCombo=this._resumeState.maxCombo||0;this._phase=this._resumeState.phase||0;
+      this._t0=this.time.now-(this._resumeState.elapsed||0);
+      this._resumeState=null;
+    }
     this._updateMusic();
     this._openingPair=openingPair;
     this._updateMusic();
@@ -707,6 +724,8 @@ var GameScene=new Phaser.Class({
   _triggerGO:function(){
     if(this._goTriggered||!this.scene.isActive('GameScene'))return;
     this._goTriggered=true;if(this.time)this.time.timeScale=1;
+    window._lastRunSnapshot={score:this._score,mergeN:this._mergeN,maxCombo:this._maxCombo,phase:this._phase,elapsed:Math.max(0,(this.time.now-this._t0)/1000),cells:[]};
+    for(var sr=0;sr<this._rows;sr++)for(var sc=0;sc<this._cols;sc++){var cell=this._grid[sr][sc];if(cell&&typeof cell==='object')window._lastRunSnapshot.cells.push({r:sr,c:sc,level:cell.level,face:cell.faceVariant||0});}
     MusicSystem.stop();
     _ysStop();
     AudioSystem.over();
@@ -788,7 +807,7 @@ var GameOverScene=new Phaser.Class({Extends:Phaser.Scene,initialize:function Gam
     var bg=this.add.graphics();bg.fillGradientStyle(0x0D0A2E,0x0D0A2E,0x1A0A3E,0x1A0A3E,1);bg.fillRect(0,0,W,H);
     var sc=[0xffffff,0xffccee,0xccddff,0xffeeaa,0xccffee];
     for(var s=0;s<55;s++){bg.fillStyle(sc[s%5],Math.random()*0.45+0.15);bg.fillCircle(Math.random()*W,Math.random()*H,Math.random()*1.6+0.4);}
-    for(var fi=0;fi<8;fi++){
+    for(let fi=0;fi<8;fi++){
       var flvl=Phaser.Math.Between(1,Math.min(Storage.maxUnlocked(),MAX_LEVEL));
       var fkey=buildShapeTexture(this,flvl,randomFace());
       var fsp=this.add.sprite(Math.random()*W,H*0.25+Math.random()*H*0.55,fkey).setAlpha(0.12).setScale(0.8+Math.random()*0.7).setDepth(-1);
@@ -824,7 +843,7 @@ var GameOverScene=new Phaser.Class({Extends:Phaser.Scene,initialize:function Gam
     var buttonBase=pY+pH-126;
     mkBtn(this,cx,buttonBase-52,t('continuead'),292,42,0xFF8800,0xCC5500,function(){
       AudioSystem.click();
-      Ads.rewarded(function(){self.scene.start('GameScene');},function(){});
+      Ads.rewarded(function(){window._rewardedClearHalf=true;self.scene.start('GameScene',{resumeState:window._lastRunSnapshot});},function(){});
     });
     mkBtn(this,cx,buttonBase,t('again'),270,48,0xFF3399,0xCC1177,function(){
       AudioSystem.click();
