@@ -329,8 +329,9 @@ var GameScene=new Phaser.Class({
     this.time.delayedCall(50,function(){if(!self.scene.isActive('GameScene'))return;self.registry.set('score',0);self.registry.set('isPaused',false);self.registry.set('phase',0);});
     // Гарантированная стартовая пара: один уровень и одна фиксированная рожица.
     var openingLevel=1,openingFace=0;
-    this._spawnShape(true,openingLevel,openingFace);
-    this._spawnShape(true,openingLevel,openingFace);
+    this._spawnShape(true,openingLevel,openingFace,{r:0,c:0});
+    this._spawnShape(true,openingLevel,openingFace,{r:0,c:1});
+    // Остальные стартовые фигуры появляются отдельно и не влияют на стартовую пару.
     for(var n=2;n<5;n++)this._spawnShape(true);
     this._spawnEv=this.time.addEvent({delay:SPAWN_BASE,callback:this._autoSpawn,callbackScope:this,loop:true});
     this._tickEv=this.time.addEvent({delay:1000,callback:this._tick,callbackScope:this,loop:true});
@@ -365,7 +366,7 @@ var GameScene=new Phaser.Class({
   _updateMusic:function(){var filled=0;for(var r=0;r<this._rows;r++)for(var c=0;c<this._cols;c++)if(this._grid[r][c]!==null)filled++;MusicSystem.setFill(filled,this._rows*this._cols);},
   _spawnShape:function(instant,forcedLevel,forcedFace){
     if(!this.scene.isActive('GameScene'))return;
-    var cell=this._empty();if(!cell){this._doCheck();return;}
+    var cell=arguments.length>3&&arguments[3]?arguments[3]:this._empty();if(!cell||this._grid[cell.r][cell.c]!==null){this._doCheck();return;}
     var lvl=forcedLevel!==undefined?forcedLevel:this._lvForPhase();
     var fv=forcedFace!==undefined?forcedFace:randomFace(),key=buildShapeTexture(this,lvl,fv);
     var pos=this._c2w(cell.r,cell.c);
