@@ -21,6 +21,8 @@ function _updatePageTitle(){document.title=t('pageTitle');}
 function _ysStop(){try{if(window.ysdk&&window.ysdk.features&&window.ysdk.features.GameplayAPI)window.ysdk.features.GameplayAPI.stop();}catch(_){}}
 function _ysStart(){try{if(window.ysdk&&window.ysdk.features&&window.ysdk.features.GameplayAPI)window.ysdk.features.GameplayAPI.start();}catch(_){}}
 function _ysStartIfGame(){try{if(window.ysdk&&window.ysdk.features&&window.ysdk.features.GameplayAPI){var _gs=window.game&&window.game.scene&&window.game.scene.getScene('GameScene');if(_gs&&_gs.scene.isActive())window.ysdk.features.GameplayAPI.start();}}catch(_){}}
+const LEADERBOARD_ID='best_score';
+function _submitLeaderboardScore(score){try{var sdk=window.ysdk;if(!sdk||!sdk.leaderboards||!sdk.isAvailableMethod||!score)return;Promise.resolve(sdk.isAvailableMethod('leaderboards.setScore')).then(function(ok){if(ok)return sdk.leaderboards.setScore(LEADERBOARD_ID,Math.floor(score));}).catch(function(){});}catch(_){}}
 function _adPause(){MusicSystem.pause();_ysStop();}
 function _adResume(){AudioSystem.resume();MusicSystem.resume();}
 
@@ -240,6 +242,35 @@ var MenuScene=new Phaser.Class({Extends:Phaser.Scene,initialize:function MenuSce
     try{if(window.ysdk&&window.ysdk.features&&window.ysdk.features.LoadingAPI)window.ysdk.features.LoadingAPI.ready();}catch(_){}
     Banner.show();
   },
+  _openLeaderboard:function(){
+    if(this._leaderboardOpen)return;this._leaderboardOpen=true;
+    var self=this,W=GAME_WIDTH,H=GAME_HEIGHT,cx=W/2,pY=72,pH=656,items=[];
+    var ov=this.add.graphics().setDepth(700);ov.fillStyle(0x000000,0.82);ov.fillRect(0,0,W,H);items.push(ov);
+    var pn=this.add.graphics().setDepth(701);pn.fillStyle(0x10092B,0.99);pn.fillRoundedRect(18,pY,W-36,pH,20);pn.lineStyle(3,0x55AAFF,0.9);pn.strokeRoundedRect(18,pY,W-36,pH,20);items.push(pn);
+    items.push(this.add.text(cx,pY+38,t('leaderboard'),{fontSize:'25px',fontStyle:'bold',color:'#FFFFFF',fontFamily:'Arial Black,Arial,sans-serif',align:'center',wordWrap:{width:350}}).setOrigin(0.5).setDepth(702));
+    var status=this.add.text(cx,pY+88,t('leaderboardLoading'),{fontSize:'17px',color:'#BBDDEE',fontFamily:'Arial,sans-serif',align:'center'}).setOrigin(0.5).setDepth(702);items.push(status);
+    var close=mkBtn(this,cx,pY+pH-42,t('close'),100,40,0x5533BB,0x3322AA,function(){AudioSystem.click();self._closeLeaderboard();});close.forEach(function(o){o.setDepth(703);});items=items.concat(close);
+    this._leaderboardItems=items;
+    var sdk=window.ysdk;
+    if(!sdk||!sdk.leaderboards||typeof sdk.leaderboards.getEntries!=='function'){status.setText(t('leaderboardUnavailable'));return;}
+    sdk.leaderboards.getEntries(LEADERBOARD_ID,{quantityTop:10,includeUser:true,quantityAround:2}).then(function(data){
+      if(!self.scene.isActive('MenuScene')||!self._leaderboardOpen)return;
+      var entries=(data&&data.entries)||[],top=entries.filter(function(e){return e&&e.player;}).sort(function(x,y){return x.rank-y.rank;}),unique=[],seen={};
+      top.forEach(function(e){var k=String(e.player.uniqueID||e.rank);if(!seen[k]){seen[k]=true;unique.push(e);}});
+      if(unique.length>11)unique=unique.slice(0,11);
+      if(!unique.length){status.setText(t('leaderboardEmpty'));return;}
+      status.setVisible(false);
+      unique.forEach(function(e,i){
+        var yy=pY+132+i*43,isTop=e.rank<=3;
+        var row=self.add.graphics().setDepth(702);row.fillStyle(isTop?0x443366:0xFFFFFF,isTop?0.72:0.07);row.fillRoundedRect(38,yy-16,W-76,36,8);items.push(row);
+        var name=(e.player.publicName||t('leaderboardMe')).slice(0,18);
+        self.add.text(52,yy,'#'+e.rank,{fontSize:'16px',fontStyle:'bold',color:isTop?'#FFD966':'#AACCFF',fontFamily:'Arial Black,Arial,sans-serif'}).setOrigin(0,0.5).setDepth(703);
+        self.add.text(112,yy,name,{fontSize:'15px',color:'#FFFFFF',fontFamily:'Arial,sans-serif'}).setOrigin(0,0.5).setDepth(703);
+        self.add.text(W-52,yy,Math.floor(e.score).toLocaleString(),{fontSize:'16px',fontStyle:'bold',color:'#88FFCC',fontFamily:'Arial Black,Arial,sans-serif'}).setOrigin(1,0.5).setDepth(703);
+      });
+    }).catch(function(){if(self.scene.isActive('MenuScene')&&self._leaderboardOpen)status.setText(t('leaderboardUnavailable'));});
+  },
+  _closeLeaderboard:function(){if(!this._leaderboardOpen)return;this._leaderboardOpen=false;var a=this._leaderboardItems||[];this._leaderboardItems=[];for(var i=0;i<a.length;i++)if(a[i]&&a[i].active)a[i].destroy();},
   _openSettings:function(){
     if(this._settingsOpen)return;this._settingsOpen=true;
     var self=this,W=GAME_WIDTH,H=GAME_HEIGHT,cx=W/2,mW=340,mH=280,mx=cx-mW/2,my=H/2-mH/2,items=[];
@@ -257,7 +288,7 @@ var MenuScene=new Phaser.Class({Extends:Phaser.Scene,initialize:function MenuSce
     cls.on('pointerdown',function(){self._closeSettings();});
   },
   _closeSettings:function(){if(!this._settingsOpen)return;this._settingsOpen=false;var items=this._settingsItems;this._settingsItems=[];for(var i=0;i<items.length;i++){if(items[i]&&items[i].active)items[i].destroy();}},
-  shutdown:function(){this._settingsOpen=false;this._settingsItems=[];}
+  shutdown:function(){this._settingsOpen=false;this._settingsItems=[];this._closeLeaderboard();}
 });
 
 /* ================================================================ GAME SCENE ================================================================ */
@@ -445,6 +476,15 @@ var GameScene=new Phaser.Class({
       if(el>=tot&&g&&g.active)g.destroy();
     }});
   },
+  _celebrateFaces:function(){
+    var self=this;
+    this._shapes.forEach(function(sp){
+      if(!sp||!sp.active||!sp.alive)return;
+      var original=sp.faceVariant,token=(sp._celebrateToken||0)+1;sp._celebrateToken=token;
+      sp.setTexture(buildShapeTexture(self,sp.level,7));
+      self.tweens.add({targets:sp,scaleX:1.2,scaleY:1.2,angle:Phaser.Math.Between(-10,10),duration:150,ease:'Back.easeOut',yoyo:true,repeat:1,onComplete:function(){if(sp&&sp.active&&sp._celebrateToken===token){sp.setTexture(buildShapeTexture(self,sp.level,original));sp.angle=0;}}});
+    });
+  },
   _floatTxt:function(x,y,msg,col){
     if(!this.scene.isActive('GameScene'))return;
     var tx=this.add.text(x,y,msg,{fontSize:'24px',fontStyle:'bold',color:hexColor(col),stroke:'#000000',strokeThickness:4,fontFamily:'Arial Black,Arial,sans-serif'}).setOrigin(0.5).setDepth(300);
@@ -481,6 +521,7 @@ var GameScene=new Phaser.Class({
     _ysStop();
     AudioSystem.over();
     var isNew=Storage.updateBest(this._score);
+    _submitLeaderboardScore(Storage.data.bestScore);
     Storage.data.totalMerges+=this._mergeN;Storage.save();
     updateRightPanel(Storage.data.totalMerges);
     window.deathCount++;
