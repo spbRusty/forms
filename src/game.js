@@ -316,7 +316,7 @@ var GameScene=new Phaser.Class({
     this._checkPending=false;
   },
   create:function(){
-    var self=this;
+    var self=this,restoring=!!this._resumeState;
     this._cols=GRID_COLS;this._rows=GRID_ROWS;this._cs=CELL_SIZE;
     this._gx=(GAME_WIDTH-this._cols*this._cs)/2;this._gy=GAME_HEIGHT*0.175;
     for(var r=0;r<this._rows;r++){this._grid[r]=[];for(var c=0;c<this._cols;c++)this._grid[r][c]=null;}
@@ -372,7 +372,7 @@ var GameScene=new Phaser.Class({
     this._updateMusic();
     this._spawnEv=this.time.addEvent({delay:SPAWN_BASE,callback:this._autoSpawn,callbackScope:this,loop:true});
     this._tickEv=this.time.addEvent({delay:1000,callback:this._tick,callbackScope:this,loop:true});
-    if(!this._resumeState)this._t0=this.time.now;
+    if(!restoring)this._t0=this.time.now;
     MusicSystem.start();MusicSystem.setFill(this._shapes.length,GRID_COLS*GRID_ROWS);
     Banner.show();
     _ysStart();
