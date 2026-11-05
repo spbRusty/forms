@@ -548,10 +548,10 @@ var GameScene=new Phaser.Class({
     if(!this.scene.isActive('GameScene'))return;
     var cnt=Math.min(8+lvl*2,18),pts=[];
     for(var i=0;i<cnt;i++){var a=(Math.PI*2/cnt)*i,spd=60+Math.random()*80;pts.push({x:x,y:y,vx:Math.cos(a)*spd,vy:Math.sin(a)*spd,sz:3.5+Math.random()*3.5});}
-    var g=this.add.graphics().setDepth(50),el=0,tot=400,self=this;
-    this.time.addEvent({delay:16,repeat:Math.ceil(tot/16),callback:function(){
-      if(!g||!g.active||!self.scene.isActive('GameScene'))return;el+=16;g.clear();var al=1-el/tot;
-      for(var j=0;j<pts.length;j++){var p=pts[j];p.x+=p.vx*0.016;p.y+=p.vy*0.016;p.vy+=280*0.016;if(al>0){g.fillStyle(col,al);g.fillCircle(p.x,p.y,p.sz*al+0.5);}}
+    var g=this.add.graphics().setDepth(50),el=0,tot=420,self=this;
+    this.time.addEvent({delay:33,repeat:Math.ceil(tot/33),callback:function(){
+      if(!g||!g.active||!self.scene.isActive('GameScene'))return;el+=33;g.clear();var al=1-el/tot;
+      for(var j=0;j<pts.length;j++){var p=pts[j];p.x+=p.vx*0.033;p.y+=p.vy*0.033;p.vy+=280*0.033;if(al>0){g.fillStyle(col,al);g.fillCircle(p.x,p.y,p.sz*al+0.5);}}
       if(el>=tot&&g&&g.active)g.destroy();
     }});
   },
@@ -865,6 +865,7 @@ var GameOverScene=new Phaser.Class({Extends:Phaser.Scene,initialize:function Gam
 /* ================================================================ PHASER ================================================================ */
 window.game=new Phaser.Game({
   type:Phaser.AUTO,parent:'game-container',backgroundColor:'#0D0A2E',
+  render:{antialias:false,roundPixels:true,powerPreference:'low-power'},
   scale:{mode:Phaser.Scale.FIT,autoCenter:Phaser.Scale.CENTER_BOTH,width:GAME_WIDTH,height:GAME_HEIGHT},
   physics:{default:'arcade',arcade:{gravity:{y:0},debug:DEBUG}},
   scene:[BootScene,MenuScene,GameScene,UIScene,GameOverScene]
