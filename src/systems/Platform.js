@@ -29,6 +29,7 @@ export function createPlatform({ pause, resume, startIfGame }) {
         }});
       } catch (_) {
         this._busy = false;
+        resume();
         callback?.();
       }
     },
@@ -48,6 +49,7 @@ export function createPlatform({ pause, resume, startIfGame }) {
         }});
       } catch (_) {
         this._busy = false;
+        resume();
         onClose?.();
       }
     }
