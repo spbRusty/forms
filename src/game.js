@@ -719,8 +719,9 @@ var GameScene=new Phaser.Class({
     items.push(this.add.text(cx,my+80,t('clearUpperHalf'),{fontSize:'17px',color:'#AACCFF',align:'center',wordWrap:{width:310},fontFamily:'Arial,sans-serif'}).setOrigin(0.5).setDepth(501));
     var adItems=mkBtn(this,cx,my+148,t('secondChanceWatch'),268,54,0xFF8800,0xCC5500,function(){AudioSystem.click();self._hideOffer();var gotReward=false;Ads.rewarded(function(){gotReward=true;window._secondChanceUsed=true;self._clearUpperHalf();},function(){if(!gotReward)self._triggerGO();});});
     adItems.forEach(function(x){x.setDepth(502);});items=items.concat(adItems);
-    if(!hasSDK){var freeItems=mkBtn(this,cx,my+214,t('freeClear'),210,46,0x00AA55,0x007733,function(){AudioSystem.click();self._hideOffer();window._secondChanceUsed=true;self._clearUpperHalf();});freeItems.forEach(function(x){x.setDepth(502);});items=items.concat(freeItems);}
-    var decItems=mkBtn(this,cx,my+mH-30,t('decline'),190,42,0x881133,0x551122,function(){AudioSystem.click();self._hideOffer();self._triggerGO();});
+    if(!hasSDK){var freeItems=mkBtn(this,cx,my+202,t('freeClear'),210,42,0x00AA55,0x007733,function(){AudioSystem.click();self._hideOffer();window._secondChanceUsed=true;self._clearUpperHalf();});freeItems.forEach(function(x){x.setDepth(502);});items=items.concat(freeItems);}
+    var decY=hasSDK?my+mH-30:my+254;
+    var decItems=mkBtn(this,cx,decY,t('decline'),190,42,0x881133,0x551122,function(){AudioSystem.click();self._hideOffer();self._triggerGO();});
     decItems.forEach(function(x){x.setDepth(502);});items=items.concat(decItems);
     this._offerItems=items;
   },
