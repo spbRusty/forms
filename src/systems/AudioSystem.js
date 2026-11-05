@@ -429,3 +429,6 @@ var AudioSystem = (function () {
     setSoundEnabled,
   };
 })();
+
+
+export default AudioSystem;

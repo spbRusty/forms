@@ -1,0 +1,11 @@
+export const DEBUG = false;
+export const GAME_WIDTH = 480;
+export const GAME_HEIGHT = 800;
+export const CELL_SIZE = 76;
+export const GRID_COLS = 5;
+export const GRID_ROWS = 6;
+export const SZ = 62;
+export const MAX_LEVEL = 20;
+export const SPAWN_BASE = 2000;
+export const INTER_THRESHOLD = 3;
+export const NUM_FACES = 12;
