@@ -507,7 +507,7 @@ var GameScene=new Phaser.Class({
     sp.setScale(0.08).setTintFill(0xFFFFFF);sp.level=lvl;sp.faceVariant=fv;sp.gridRow=r;sp.gridCol=c;sp.alive=true;sp.setDepth(1);
     this._grid[r][c]=sp;this._shapes.push(sp);
     this.time.delayedCall(65,function(){if(sp&&sp.active)sp.clearTint();});
-    this.tweens.add({targets:sp,scaleX:1.24,scaleY:0.88,duration:85,ease:'Back.easeOut',yoyo:true,onComplete:function(){if(sp&&sp.active)self.tweens.add({targets:sp,scaleX:1,scaleY:1,duration:65});}});
+    this.tweens.add({targets:sp,scaleX:1.24,scaleY:0.88,duration:85,ease:'Back.easeOut',yoyo:true,onComplete:function(){if(sp&&sp.active)sp.setScale(1,1);}});
     this.cameras.main.shake(65+lvl*9,Math.min(lvl*0.0018,0.016));
     this._burst(pos.x,pos.y,colorForLevel(lvl),lvl);
     try{navigator.vibrate(18+lvl*3);}catch(_){}
@@ -534,7 +534,7 @@ var GameScene=new Phaser.Class({
       this._praiseProgress=0;
       this._nextPraise=Phaser.Math.Between(3,5);
       this._showPraise();
-      this._celebrateFaces();
+      this._celebrateFaces(sp);
     }
     if(Storage.addForm(lvl)){AudioSystem.newForm();this._floatTxt(pos.x,pos.y-88,t('evolvedTo')+lvl+'! \u2728',0xFFDD00);unlockLpSlot(lvl);}
     
@@ -677,11 +677,11 @@ var GameScene=new Phaser.Class({
     }});
   },
   _fireworks:function(){this._playCelebration(0);},
-  _celebrateFaces:function(){
-    // Один общий лёгкий импульс вместо смены текстур и множества тяжёлых tween.
+  _celebrateFaces:function(exclude){
+    // Не запускаем масштабирование на фигуре, которая только что появилась после слияния.
     var self=this,count=0;
     this._shapes.forEach(function(sp){
-      if(!sp||!sp.active||!sp.alive||count>=12)return;
+      if(!sp||!sp.active||!sp.alive||sp===exclude||count>=12)return;
       count++;
       self.tweens.add({targets:sp,scaleX:1.10,scaleY:1.10,duration:150,ease:'Sine.easeOut',yoyo:true});
     });
