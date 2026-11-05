@@ -593,7 +593,7 @@ var GameScene=new Phaser.Class({
         if(p.life<=0){particles.splice(pi,1);continue;}
         var a=Math.min(1,p.life/180)*Math.min(1,p.life/p.max*2);
         if(p.kind==='star'){
-          gfx.lineStyle(2.6,a,p.color);gfx.lineBetween(p.x-5,p.y,p.x+5,p.y);
+          gfx.lineStyle(2.6,0xFFFFFF,a);gfx.lineBetween(p.x-5,p.y,p.x+5,p.y);
           gfx.lineBetween(p.x,p.y-5,p.x,p.y+5);
           gfx.fillStyle(0xFFFFFF,a);gfx.fillCircle(p.x,p.y,2.8*a);
         }else{
