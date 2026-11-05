@@ -14,7 +14,7 @@ export const L10N = {
     forms:'Формы',continuead:'📺 Очистить половину поля',
     pageTitle:'Слияй-Ка',
     leaderboard:'ТАБЛИЦА ЛИДЕРОВ',leaderboardLoading:'Загружаем рейтинг…',leaderboardEmpty:'Пока нет результатов',leaderboardUnavailable:'Рейтинг пока недоступен',leaderboardMe:'Вы',
-    praise:['Отлично получается!','Ты молодец!','Так держать!','Здорово!','Прекрасно!','Вот это ход!','Супер!','Идеально!'],
+    praise:['Отлично получается!','Вот это ход!','Так держать!','Просто блеск!','Невероятно!','Красиво сыграно!','Ты набираешь темп!','Вот это серия!','Чистое мастерство!','Потрясающий результат!','Ещё один шедевр!','Поле сияет!','Безупречно!','Так держать темп!','Настоящий фейерверк!'],
     praiseCombo:['Невероятное комбо!','Ты просто машина!','Вот это серия!','Потрясающе!','Никто тебя не остановит!'],
   },
   en:{play:'PLAY',score:'Score',best:'Best',again:'PLAY AGAIN',menu:'MENU',
@@ -32,7 +32,7 @@ export const L10N = {
     forms:'Shapes',continuead:'📺 Clear half the board',
     pageTitle:'Merge It!',
     leaderboard:'LEADERBOARD',leaderboardLoading:'Loading leaderboard…',leaderboardEmpty:'No scores yet',leaderboardUnavailable:'Leaderboard is unavailable',leaderboardMe:'You',
-    praise:['Great job!','You are doing great!','Keep it up!','Awesome!','Brilliant!','Nice move!','Super!','Perfect!'],
+    praise:['Great job!','What a move!','Keep it up!','Absolutely brilliant!','Incredible!','Beautifully done!','You are on a roll!','What a streak!','Pure skill!','Fantastic result!','Another masterpiece!','Shining performance!','Flawless!','Keep that momentum!','A real showstopper!'],
     praiseCombo:['Amazing combo!','You are on fire!','What a streak!','Fantastic!','Unstoppable!'],
   }
 };
