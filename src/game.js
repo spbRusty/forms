@@ -222,8 +222,6 @@ var MenuScene=new Phaser.Class({Extends:Phaser.Scene,initialize:function MenuSce
     for(var pi=0;pi<lvPrev.length;pi++){
       (function(idx,lv){
         var fv=randomFace();
-        if(idx===1){lv=lvPrev[0];fv=0;}
-        else if(idx===0){fv=0;}
         var key=buildShapeTexture(self,lv,fv);
         var sp=self.add.sprite(rowX+idx*spacing,H*0.375,key).setScale(0.72);
         self.tweens.add({targets:sp,y:H*0.375-12,duration:830+idx*190,ease:'Sine.easeInOut',yoyo:true,repeat:-1});
@@ -332,13 +330,23 @@ var GameScene=new Phaser.Class({
     this.time.delayedCall(50,function(){if(!self.scene.isActive('GameScene'))return;self.registry.set('score',0);self.registry.set('isPaused',false);self.registry.set('phase',0);});
     // В начале поля видна только гарантированно одинаковая пара.
     // Остальные фигуры появляются обычным автоспавном позже.
+    // Две стартовые фигуры игрового поля создаются напрямую из одной текстуры.
+    // Меню использует отдельную случайную генерацию и на это не влияет.
     var openingLevel=1,openingFace=0;
     var openingTexture=buildShapeTexture(this,openingLevel,openingFace);
-    this._spawnShape(true,openingLevel,openingFace,{r:0,c:0},openingTexture,true);
-    this._spawnShape(true,openingLevel,openingFace,{r:0,c:1},openingTexture,true);
-    // Жёстко фиксируем именно первые два созданных объекта: один уровень,
-    // один вариант лица и одна общая текстура. Проверка после стартовых tween.
-    this._openingPair=[this._grid[0][0],this._grid[0][1]];
+    var openingCells=[{r:0,c:0},{r:0,c:1}],openingPair=[];
+    for(var oi=0;oi<openingCells.length;oi++){
+      var cell=openingCells[oi],pos=this._c2w(cell.r,cell.c);
+      var sp=this.add.sprite(pos.x,pos.y,openingTexture);
+      sp.level=openingLevel;sp.faceVariant=openingFace;
+      sp.gridRow=cell.r;sp.gridCol=cell.c;sp.alive=true;
+      sp.setDepth(1).setOrigin(0.5,0.5).setScale(1).setAlpha(1).setAngle(0).clearTint();
+      this._grid[cell.r][cell.c]=sp;
+      this._shapes.push(sp);
+      openingPair.push(sp);
+    }
+    this._openingPair=openingPair;
+    this._updateMusic();
     var lockOpeningPair=function(){
       if(!self.scene.isActive('GameScene')||!self._openingPair||self._openingPair.length!==2)return;
       self._openingPair.forEach(function(sp){
