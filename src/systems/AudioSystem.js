@@ -23,21 +23,19 @@ var AudioSystem = (function () {
   let intensity = 0;
 
   // ── Гаммы и паттерны ─────────────────
-  const C_MAJOR    = [261.63, 329.63, 392.00, 440.00, 523.25];
-  const C_MINOR    = [261.63, 311.13, 349.23, 392.00, 523.25];
-  const C_PHRYGIAN = [261.63, 277.18, 329.63, 369.99, 392.00, 466.16, 523.25];
-
-  const PATTERN_A = [0, 2, 4, 2, 3, 1, 4, 2];
-  const PATTERN_B = [0, 3, 2, 4, 1, 3, 0, 4];
-  const PATTERN_C = [4, 2, 3, 0, 4, 1, 2, 3];
-
-  const BASS       = [65.41, 82.41, 98.00, 82.41];
-  const BASS_TENSE = [65.41, 73.42, 87.31, 82.41];
-
-  const DETUNE = [0, 7, -5, 10, -8, 4];
+  const SCALE = [261.63, 293.66, 329.63, 392.00, 440.00, 523.25, 587.33, 659.25]; // C major pentatonic + мягкие проходящие ноты
+  const MELODY = [0, 2, 4, 2, 3, 4, 2, 1, 0, 2, 4, 5, 4, 2, 1, 2, 0, 2, 3, 4, 5, 4, 3, 2, 1, 2, 4, 2, 1, 0, 1, 2];
+  const CHORDS = [
+    [130.81, 164.81, 196.00], // C
+    [110.00, 130.81, 164.81], // Am
+    [174.61, 220.00, 261.63], // F
+    [196.00, 246.94, 293.66]  // G
+  ];
+  const BASS = [65.41, 55.00, 87.31, 98.00];
+  const DETUNE = [0, -3, 3, -5, 5, -2, 2, 0, 4, -4];
 
   // ── Пул осцилляторов ─────────────────
-  const MELODY_POOL_SIZE = 6;
+  const MELODY_POOL_SIZE = 10;
   const BASS_POOL_SIZE   = 3;
   let melodyPool = [];
   let bassPool   = [];
@@ -91,8 +89,8 @@ var AudioSystem = (function () {
     p.osc.frequency.setValueAtTime(freq, time);
     p.gain.gain.cancelScheduledValues(time);
     p.gain.gain.setValueAtTime(0.0001, time);
-    p.gain.gain.exponentialRampToValueAtTime(vol, time + 0.02);
-    p.gain.gain.exponentialRampToValueAtTime(0.0001, time + dur);
+    p.gain.gain.exponentialRampToValueAtTime(vol, time + 0.045);
+    p.gain.gain.setTargetAtTime(0.0001, time + dur * 0.72, 0.09);
     p.freeAt = time + dur + 0.05;
   }
 
@@ -107,9 +105,9 @@ var AudioSystem = (function () {
     p.osc.frequency.setValueAtTime(freq, time);
     p.gain.gain.cancelScheduledValues(time);
     p.gain.gain.setValueAtTime(0.0001, time);
-    p.gain.gain.exponentialRampToValueAtTime(0.15, time + 0.05);
-    p.gain.gain.exponentialRampToValueAtTime(0.0001, time + 0.4);
-    p.freeAt = time + 0.45;
+    p.gain.gain.exponentialRampToValueAtTime(0.065, time + 0.09);
+    p.gain.gain.setTargetAtTime(0.0001, time + 0.48, 0.12);
+    p.freeAt = time + 0.72;
   }
 
   function _silencePools () {
@@ -132,46 +130,27 @@ var AudioSystem = (function () {
   // ─────────────────────────────────────
 
   function _scheduleNote (time) {
-    let scale, pattern;
-    if (intensity > 0.7) {
-      scale   = C_PHRYGIAN;
-      pattern = PATTERN_C;
-    } else if (intensity > 0.35) {
-      scale   = C_MINOR;
-      pattern = PATTERN_B;
-    } else {
-      scale   = C_MAJOR;
-      pattern = PATTERN_A;
+    const step = noteIndex % MELODY.length;
+    const bar = Math.floor(noteIndex / 8);
+    const note = MELODY[step];
+    const octave = (step === 7 || step === 15 || step === 23) ? 2 : 1;
+    const freq = SCALE[note] * octave;
+    const duration = [0.34, 0.42, 0.36, 0.48, 0.38, 0.44, 0.34, 0.56][step % 8];
+
+    // Спокойная мелодия без резких скачков и высокочастотных дублей.
+    _playNotePooled(freq, time, duration, 0.052);
+
+    // Гармония меняется раз в четыре такта, бас — только на сильной доле.
+    if (noteIndex % 8 === 0) {
+      const chordIndex = Math.floor(noteIndex / 8) % CHORDS.length;
+      _playChordPooled(CHORDS[chordIndex], time, 1.75, 0.035);
+      _playBassPooled(BASS[chordIndex], time);
     }
 
-    const noteIdx     = pattern[noteIndex % pattern.length];
-    const freq        = scale[noteIdx % scale.length];
-    const octaveShift = Math.floor(noteIndex / pattern.length) % 2 === 0 ? 1 : 2;
-    const actualFreq  = freq * octaveShift;
-
-    _playNotePooled(actualFreq, time, 0.3, 0.12);
-    _playNotePooled(actualFreq * 2, time, 0.25, 0.05);
-
-    if (noteIndex % 4 === 0) {
-      const bassScale = intensity > 0.5 ? BASS_TENSE : BASS;
-      const bassIdx   = Math.floor(noteIndex / 4) % bassScale.length;
-      _playBassPooled(bassScale[bassIdx], time);
+    // Редкие тихие акценты вместо постоянных звенящих пингов.
+    if (step === 15 || step === 31) {
+      _playNotePooled(SCALE[4] * 2, time + 0.12, 0.32, 0.022);
     }
-
-    const chordEvery = intensity > 0.35 ? 4 : 8;
-    if (noteIndex % chordEvery === 0) {
-      const chordRoot = scale[0];
-      const chord = intensity > 0.5
-        ? [chordRoot, chordRoot * 1.19, chordRoot * 1.50]
-        : [chordRoot, chordRoot * 1.25, chordRoot * 1.50];
-      _playChordPooled(chord, time, 0.22, 0.09);
-    }
-
-    if (noteIndex % 16 === 0) {
-      const pingFreq = scale[4 % scale.length] * 4;
-      _playNotePooled(pingFreq, time, 0.12, 0.07);
-    }
-
     noteIndex++;
   }
 
@@ -199,18 +178,18 @@ var AudioSystem = (function () {
     ctx = new (window.AudioContext || window.webkitAudioContext)();
 
     master = ctx.createGain();
-    master.gain.value = 0.25;
+    master.gain.value = 0.16;
     master.connect(ctx.destination);
 
     filter = ctx.createBiquadFilter();
     filter.type = 'lowpass';
-    filter.frequency.value = 1200;
-    filter.Q.value = 1;
+    filter.frequency.value = 1650;
+    filter.Q.value = 0.55;
     filter.connect(master);
 
     bassFilter = ctx.createBiquadFilter();
     bassFilter.type = 'lowpass';
-    bassFilter.frequency.value = 400;
+    bassFilter.frequency.value = 300;
     bassFilter.connect(master);
 
     _initPools();
@@ -261,10 +240,11 @@ var AudioSystem = (function () {
     intensity = Math.max(0, Math.min(1, v));
 
     // Темп: обновляем сразу — планировщик подхватит на следующем цикле
-    currentStepMs = intensity > 0.5 ? 280 : 400;
+    currentStepMs = intensity > 0.5 ? 470 : 520;
 
-    if (filter)     filter.frequency.value     = 800  + intensity * 2500;
-    if (bassFilter) bassFilter.frequency.value = 300  + intensity * 600;
+    // Интенсивность меняет плотность/тембр совсем немного, не лад и не громкость.
+    if (filter)     filter.frequency.setTargetAtTime(1500 + intensity * 450, ctx.currentTime, 0.8);
+    if (bassFilter) bassFilter.frequency.setTargetAtTime(260 + intensity * 100, ctx.currentTime, 0.8);
   }
 
   // ─────────────────────────────────────
@@ -283,7 +263,7 @@ var AudioSystem = (function () {
     osc.type = 'triangle';
     osc.frequency.setValueAtTime(600, now);
     osc.frequency.exponentialRampToValueAtTime(300, now + 0.1);
-    gain.gain.setValueAtTime(0.2, now);
+    gain.gain.setValueAtTime(0.075, now);
     gain.gain.exponentialRampToValueAtTime(0.0001, now + 0.15);
     osc.connect(gain);
     gain.connect(master);
@@ -298,7 +278,7 @@ var AudioSystem = (function () {
     const now  = ctx.currentTime;
     osc.type = 'sine';
     osc.frequency.value = 800;
-    gain.gain.setValueAtTime(0.1, now);
+    gain.gain.setValueAtTime(0.045, now);
     gain.gain.exponentialRampToValueAtTime(0.0001, now + 0.05);
     osc.connect(gain);
     gain.connect(master);
@@ -314,7 +294,7 @@ var AudioSystem = (function () {
     const gain1 = ctx.createGain();
     osc1.type = 'sawtooth';
     osc1.frequency.setValueAtTime(220, now);
-    gain1.gain.setValueAtTime(0.3, now);
+    gain1.gain.setValueAtTime(0.12, now);
     gain1.gain.exponentialRampToValueAtTime(0.0001, now + 0.15);
     osc1.connect(gain1); gain1.connect(master);
     osc1.start(now); osc1.stop(now + 0.15);
@@ -324,7 +304,7 @@ var AudioSystem = (function () {
     osc2.type = 'sawtooth';
     osc2.frequency.setValueAtTime(155, now);
     osc2.frequency.exponentialRampToValueAtTime(80, now + 0.2);
-    gain2.gain.setValueAtTime(0.25, now);
+    gain2.gain.setValueAtTime(0.10, now);
     gain2.gain.exponentialRampToValueAtTime(0.0001, now + 0.25);
     osc2.connect(gain2); gain2.connect(master);
     osc2.start(now); osc2.stop(now + 0.25);
@@ -338,7 +318,7 @@ var AudioSystem = (function () {
       const gain = ctx.createGain();
       osc.type = 'sine';
       osc.frequency.value = freq;
-      gain.gain.setValueAtTime(0.2, t);
+      gain.gain.setValueAtTime(0.09, t);
       gain.gain.exponentialRampToValueAtTime(0.0001, t + 0.15);
       osc.connect(gain); gain.connect(master);
       osc.start(t); osc.stop(t + 0.15);
@@ -351,12 +331,12 @@ var AudioSystem = (function () {
 
   function muteAll () {
     isMuted = true;
-    if (master) master.gain.value = 0;
+    if (master) master.gain.setTargetAtTime(0.0001, ctx.currentTime, 0.025);
   }
 
   function unmuteAll () {
     isMuted = false;
-    if (master) master.gain.value = 0.2;
+    if (master) master.gain.setTargetAtTime(0.16, ctx.currentTime, 0.04);
   }
 
   // Управление музыкой и звуком без глобальных window.*
