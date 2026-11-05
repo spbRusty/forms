@@ -387,7 +387,7 @@ var GameScene=new Phaser.Class({
   _drawBg:function(){
     if(!this._bgGfx||!this._bgGfx.active)return;
     var g=this._bgGfx;g.clear();
-    var c1=this._phase>=3?0x1A0A3E:0x0D0A2E,c2=this._phase>=3?0x300A58:0x1A0A3E;
+    var c1=this._phase>=3?0x1C2030:0x16192B,c2=this._phase>=3?0x252B40:0x20263A;
     g.fillGradientStyle(c1,c1,c2,c2,1);g.fillRect(0,0,GAME_WIDTH,GAME_HEIGHT);
     var sc=[0xffffff,0xffccee,0xccddff,0xffeeaa,0xccffee];
     for(var i=0;i<55;i++){g.fillStyle(sc[i%5],Math.random()*0.5+0.1);g.fillCircle(Math.random()*GAME_WIDTH,Math.random()*GAME_HEIGHT,Math.random()*1.8+0.3);}
@@ -397,8 +397,8 @@ var GameScene=new Phaser.Class({
     var g=this._gridGfx;g.clear();
     for(var r=0;r<this._rows;r++)for(var c=0;c<this._cols;c++){
       var x=this._gx+c*this._cs+3,y=this._gy+r*this._cs+3,s=this._cs-6;
-      g.fillStyle(0x1A1060,0.70);g.fillRoundedRect(x,y,s,s,10);
-      g.lineStyle(1.5,0x4433AA,0.45);g.strokeRoundedRect(x,y,s,s,10);
+      g.fillStyle(0x252C40,0.76);g.fillRoundedRect(x,y,s,s,10);
+      g.lineStyle(1.5,0x52617D,0.42);g.strokeRoundedRect(x,y,s,s,10);
     }
   },
   _c2w:function(r,c){return{x:this._gx+c*this._cs+this._cs/2,y:this._gy+r*this._cs+this._cs/2};},
@@ -503,9 +503,10 @@ var GameScene=new Phaser.Class({
     if(!this.scene.isActive('GameScene'))return;
     var self=this,pos=this._c2w(r,c),fv=randomFace(),key=buildShapeTexture(this,lvl,fv);
     var sp=this.add.sprite(pos.x,pos.y,key);
-    sp.setScale(0.08);sp.level=lvl;sp.faceVariant=fv;sp.gridRow=r;sp.gridCol=c;sp.alive=true;sp.setDepth(1);
+    sp.setScale(0.08).setTintFill(0xFFFFFF);sp.level=lvl;sp.faceVariant=fv;sp.gridRow=r;sp.gridCol=c;sp.alive=true;sp.setDepth(1);
     this._grid[r][c]=sp;this._shapes.push(sp);
-    this.tweens.add({targets:sp,scaleX:1.24,scaleY:1.24,duration:130,ease:'Back.easeOut',onComplete:function(){if(sp&&sp.active)self.tweens.add({targets:sp,scaleX:1,scaleY:1,duration:70});}});
+    this.time.delayedCall(65,function(){if(sp&&sp.active)sp.clearTint();});
+    this.tweens.add({targets:sp,scaleX:1.24,scaleY:0.88,duration:85,ease:'Back.easeOut',yoyo:true,onComplete:function(){if(sp&&sp.active)self.tweens.add({targets:sp,scaleX:1,scaleY:1,duration:65});}});
     this.cameras.main.shake(65+lvl*9,Math.min(lvl*0.0018,0.016));
     this._burst(pos.x,pos.y,colorForLevel(lvl),lvl);
     try{navigator.vibrate(18+lvl*3);}catch(_){}
