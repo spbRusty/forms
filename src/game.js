@@ -847,7 +847,8 @@ var GameOverScene=new Phaser.Class({Extends:Phaser.Scene,initialize:function Gam
     });
 
     var buttonBase=pY+pH-126;
-    mkBtn(this,cx,buttonBase-52,t('continuead'),292,42,0xFF8800,0xCC5500,function(){
+    this.add.text(cx,buttonBase-91,t('continueRewardInfo'),{fontSize:'13px',color:'#E8DDF5',fontFamily:'Arial,sans-serif',align:'center',wordWrap:{width:340}}).setOrigin(0.5);
+    mkBtn(this,cx,buttonBase-52,t('continuead'),310,42,0xFF8800,0xCC5500,function(){
       AudioSystem.click();
       Ads.rewarded(function(){window._rewardedClearHalf=true;self.scene.start('GameScene',{resumeState:window._lastRunSnapshot});},function(){});
     });
