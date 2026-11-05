@@ -435,21 +435,10 @@ var GameScene=new Phaser.Class({
   },
   _doCheck:function(){
     if(this._goTriggered||this._offerActive||this._merging||!this.scene.isActive('GameScene'))return;
-    // Поле должно быть действительно заполнено фигурами, а не временными маркерами слияния.
+    // Финальное табло запускается сразу, когда заняты все клетки поля.
     for(var r=0;r<this._rows;r++)for(var c=0;c<this._cols;c++){
       var cell=this._grid[r][c];
       if(!cell||cell==='_')return;
-    }
-    // Продолжать игру можно только если существует реальная пара для слияния:
-    // одинаковый уровень и расстояние между фигурами меньше радиуса срабатывания.
-    for(var i=0;i<this._shapes.length;i++){
-      var a=this._shapes[i];
-      if(!a||!a.active||!a.alive)continue;
-      for(var j=i+1;j<this._shapes.length;j++){
-        var b=this._shapes[j];
-        if(!b||!b.active||!b.alive||a.level!==b.level)continue;
-        if(Phaser.Math.Distance.Between(a.x,a.y,b.x,b.y)<this._cs*0.82)return;
-      }
     }
     this._triggerGO();
   },
