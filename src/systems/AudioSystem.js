@@ -357,6 +357,26 @@ var AudioSystem = (function () {
     });
   }
 
+  function _playCelebrationSound(notes,wave,spacing,duration,volume){
+    if(!_sfxAllowed())return;
+    const now=ctx.currentTime;
+    notes.forEach((note,i)=>{
+      const t=now+i*spacing,osc=ctx.createOscillator(),gain=ctx.createGain();
+      osc.type=wave;
+      if(wave==='sine')osc.frequency.setValueAtTime(note,t);
+      else osc.frequency.setValueAtTime(note,t);
+      if(wave==='sine')osc.frequency.exponentialRampToValueAtTime(Math.max(80,note*1.35),t+duration*0.45);
+      gain.gain.setValueAtTime(0.0001,t);
+      gain.gain.exponentialRampToValueAtTime(volume,t+0.025);
+      gain.gain.exponentialRampToValueAtTime(0.0001,t+duration);
+      osc.connect(gain);gain.connect(master);osc.start(t);osc.stop(t+duration+0.02);
+    });
+  }
+  function playHearts(){_playCelebrationSound([523.25,659.25,783.99,1046.5,1318.5],'sine',0.085,0.42,0.045);}
+  function playStars(){_playCelebrationSound([1568,1174.66,1760,1396.91,2093],'sine',0.11,0.58,0.035);}
+  function playRainbow(){_playCelebrationSound([392,493.88,587.33,698.46,880,1046.5,1174.66],'triangle',0.075,0.34,0.04);}
+  function playConfetti(){_playCelebrationSound([260,390,520,330,660,440,880],'square',0.055,0.16,0.018);}
+
   function playLapComplete () {
     if (!_sfxAllowed()) return;
     [523, 659, 784, 1047].forEach((freq, i) => {
@@ -449,6 +469,10 @@ var AudioSystem = (function () {
     playLapComplete,
     playAwe,
     playFireworks,
+    playHearts,
+    playStars,
+    playRainbow,
+    playConfetti,
 
     // управление
     setIntensity,
