@@ -519,39 +519,101 @@ var GameScene=new Phaser.Class({
   },
   _fireworks:function(){
     if(!this.scene.isActive('GameScene')||this._paused)return;
-    var self=this,colors=[0xFF4D9D,0xFFE45C,0x62E8FF,0xA78BFA,0x7CFF9B,0xFFFFFF];
-    var particles=[];
-    // Несколько залпов одновременно по всей площади игрового поля.
-    var centers=[
-      {x:GAME_WIDTH*0.16,y:GAME_HEIGHT*0.23},
-      {x:GAME_WIDTH*0.50,y:GAME_HEIGHT*0.18},
-      {x:GAME_WIDTH*0.84,y:GAME_HEIGHT*0.27},
-      {x:GAME_WIDTH*0.28,y:GAME_HEIGHT*0.63},
-      {x:GAME_WIDTH*0.73,y:GAME_HEIGHT*0.67}
+    var self=this,W=GAME_WIDTH,H=GAME_HEIGHT;
+    var palette=[0xFF3D9A,0xFFE34A,0x43E8FF,0xB66CFF,0x75FF75,0xFFFFFF,0xFF8B45];
+    var particles=[],rockets=[],rings=[],elapsed=0,finished=false;
+    var gfx=this.add.graphics().setDepth(460);
+    var launchPoints=[
+      {x:W*0.10,y:H*0.34},{x:W*0.28,y:H*0.20},{x:W*0.50,y:H*0.29},
+      {x:W*0.72,y:H*0.18},{x:W*0.90,y:H*0.36},
+      {x:W*0.20,y:H*0.62},{x:W*0.49,y:H*0.52},{x:W*0.80,y:H*0.64}
     ];
-    centers.forEach(function(center,bi){
-      var cx=center.x+(Math.random()-0.5)*30,cy=center.y+(Math.random()-0.5)*24;
-      var count=bi<3?20:16,color=colors[Phaser.Math.Between(0,colors.length-1)];
+    function burst(x,y,color,power){
+      var count=Phaser.Math.Between(42,58),rotation=Math.random()*Math.PI*2;
+      // Два расходящихся кольца искр и плотное ядро.
       for(var i=0;i<count;i++){
-        var angle=Math.PI*2*i/count+(Math.random()-0.5)*0.18;
-        var speed=75+Math.random()*125;
-        particles.push({x:cx,y:cy,vx:Math.cos(angle)*speed,vy:Math.sin(angle)*speed,
-          life:650+Math.random()*300,max:950,size:1.8+Math.random()*2.4,color:color});
+        var a=rotation+Math.PI*2*i/count+(Math.random()-0.5)*0.10;
+        var speed=(75+Math.random()*155)*power;
+        var life=850+Math.random()*700;
+        particles.push({x:x,y:y,px:x,py:y,vx:Math.cos(a)*speed,vy:Math.sin(a)*speed,
+          life:life,max:life,size:1.5+Math.random()*2.7,color:color,kind:i%4===0?'glint':'spark'});
       }
+      for(var j=0;j<18;j++){
+        var a2=Math.random()*Math.PI*2,sp=35+Math.random()*105,life2=650+Math.random()*600;
+        particles.push({x:x,y:y,px:x,py:y,vx:Math.cos(a2)*sp,vy:Math.sin(a2)*sp,
+          life:life2,max:life2,size:1+Math.random()*1.8,color:palette[Phaser.Math.Between(0,palette.length-1)],kind:'spark'});
+      }
+      rings.push({x:x,y:y,r:3,life:440,max:440,color:color});
+      // Несколько ярких звёзд с длинными лучами.
+      for(var k=0;k<5;k++){
+        var aa=Math.random()*Math.PI*2,ss=100+Math.random()*100,ll=500+Math.random()*350;
+        particles.push({x:x,y:y,px:x,py:y,vx:Math.cos(aa)*ss,vy:Math.sin(aa)*ss,
+          life:ll,max:ll,size:3.4,color:0xFFFFFF,kind:'star'});
+      }
+    }
+    function launch(point,index){
+      var fromX=point.x+(Math.random()-0.5)*W*0.20;
+      var fromY=H+18;
+      var color=palette[index%palette.length];
+      rockets.push({x:fromX,y:fromY,px:fromX,py:fromY,
+        tx:point.x+(Math.random()-0.5)*34,ty:point.y+(Math.random()-0.5)*36,
+        t:0,duration:520+Math.random()*220,color:color,index:index});
+    }
+    // Первая волна раскрывает всё поле, вторая заполняет промежутки,
+    // финальная волна даёт несколько крупных разноцветных залпов.
+    launchPoints.forEach(function(p,i){self.time.delayedCall(i*95,function(){if(self.scene.isActive('GameScene')&&!self._paused)launch(p,i);});});
+    [0,210,420,650,880].forEach(function(delay,i){
+      self.time.delayedCall(delay,function(){
+        if(!self.scene.isActive('GameScene')||self._paused)return;
+        var p=launchPoints[(i*3+2)%launchPoints.length];
+        launch({x:W-p.x,y:p.y+(i%2?35:-25)},i+3);
+      });
     });
-    var gfx=this.add.graphics().setDepth(420),elapsed=0;
+    this.cameras.main.flash(130,255,255,255,false);
+    this.cameras.main.shake(180,0.0035);
     var ev=this.time.addEvent({delay:16,loop:true,callback:function(){
       if(!gfx.active||!self.scene.isActive('GameScene')){ev.remove();if(gfx.active)gfx.destroy();return;}
       elapsed+=16;gfx.clear();
-      particles.forEach(function(p){
-        if(p.life<=0)return;
+      // Полёт ракет с ярким хвостом.
+      for(var ri=rockets.length-1;ri>=0;ri--){
+        var r=rockets[ri];r.px=r.x;r.py=r.y;r.t+=16/r.duration;
+        var q=Math.min(1,r.t),ease=1-Math.pow(1-q,2);
+        r.x=r.x+(r.tx-r.x)*Math.min(1,16/Math.max(16,r.duration*(1-q+0.03)));
+        r.y=H+18+(r.ty-(H+18))*ease;
+        gfx.lineStyle(5, r.color,0.18);gfx.lineBetween(r.px,r.py,r.x,r.y);
+        gfx.lineStyle(2.2,0xFFFFFF,0.95);gfx.lineBetween(r.px,r.py,r.x,r.y);
+        gfx.fillStyle(r.color,0.9);gfx.fillCircle(r.x,r.y,3.5);
+        if(q>=1){burst(r.tx,r.ty,r.color,r.index%3===0?1.2:1);rockets.splice(ri,1);}
+      }
+      // Искры, длинные световые следы и звёздные вспышки.
+      for(var pi=particles.length-1;pi>=0;pi--){
+        var p=particles[pi];p.px=p.x;p.py=p.y;
         p.life-=16;p.x+=p.vx*0.016;p.y+=p.vy*0.016;
-        p.vx*=0.992;p.vy=p.vy*0.992+48*0.016;
-        var alpha=Math.max(0,p.life/Math.min(p.max,950));
-        gfx.fillStyle(p.color,alpha);
-        gfx.fillCircle(p.x,p.y,p.size*alpha);
-      });
-      if(elapsed>=1050){ev.remove();if(gfx.active)gfx.destroy();}
+        p.vx*=0.986;p.vy=p.vy*0.986+115*0.016;
+        if(p.life<=0){particles.splice(pi,1);continue;}
+        var a=Math.min(1,p.life/180)*Math.min(1,p.life/p.max*2);
+        if(p.kind==='star'){
+          gfx.lineStyle(2.6,a,p.color);gfx.lineBetween(p.x-5,p.y,p.x+5,p.y);
+          gfx.lineBetween(p.x,p.y-5,p.x,p.y+5);
+          gfx.fillStyle(0xFFFFFF,a);gfx.fillCircle(p.x,p.y,2.8*a);
+        }else{
+          gfx.lineStyle(p.kind==='glint'?2.5:1.5,p.color,a*0.8);
+          gfx.lineBetween(p.px,p.py,p.x,p.y);
+          gfx.fillStyle(p.color,a);gfx.fillCircle(p.x,p.y,p.size*a);
+          if(p.kind==='glint'){gfx.fillStyle(0xFFFFFF,a*0.9);gfx.fillCircle(p.x,p.y,1.6*a);}
+        }
+      }
+      // Расширяющиеся световые ударные кольца.
+      for(var gi=rings.length-1;gi>=0;gi--){
+        var g=rings[gi];g.life-=16;g.r+=3.0;
+        if(g.life<=0){rings.splice(gi,1);continue;}
+        gfx.lineStyle(3, g.color,g.life/g.max*0.65);gfx.strokeCircle(g.x,g.y,g.r);
+        gfx.lineStyle(1,0xFFFFFF,g.life/g.max*0.55);gfx.strokeCircle(g.x,g.y,g.r*0.72);
+      }
+      if(elapsed>3300&&particles.length===0&&rockets.length===0&&rings.length===0){
+        ev.remove();if(gfx.active)gfx.destroy();finished=true;
+      }
+      if(elapsed>5200&&!finished){ev.remove();if(gfx.active)gfx.destroy();}
     }});
   },
   _celebrateFaces:function(){
