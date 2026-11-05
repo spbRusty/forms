@@ -884,6 +884,8 @@ var GameOverScene=new Phaser.Class({Extends:Phaser.Scene,initialize:function Gam
     });
     mkBtn(this,cx,buttonBase+54,t('menu'),230,44,0x5533BB,0x3322AA,function(){
       AudioSystem.click();
+      window._lastRunSnapshot=null;
+      window._rewardedClearUpper=false;
       if(window.deathCount>=INTER_THRESHOLD){window.deathCount=0;Ads.inter(function(){self.scene.start('MenuScene');});}
       else self.scene.start('MenuScene');
     });
