@@ -332,8 +332,8 @@ var GameScene=new Phaser.Class({
     // Остальные фигуры появляются обычным автоспавном позже.
     var openingLevel=1,openingFace=0;
     var openingTexture=buildShapeTexture(this,openingLevel,openingFace);
-    this._spawnShape(true,openingLevel,openingFace,{r:0,c:0},openingTexture);
-    this._spawnShape(true,openingLevel,openingFace,{r:0,c:1},openingTexture);
+    this._spawnShape(true,openingLevel,openingFace,{r:0,c:0},openingTexture,true);
+    this._spawnShape(true,openingLevel,openingFace,{r:0,c:1},openingTexture,true);
     // Жёстко фиксируем именно первые два созданных объекта: один уровень,
     // один вариант лица и одна общая текстура. Проверка после стартовых tween.
     this._openingPair=this._shapes.slice(0,2);
@@ -380,7 +380,7 @@ var GameScene=new Phaser.Class({
   _empty:function(){var a=[];for(var r=0;r<this._rows;r++)for(var c=0;c<this._cols;c++)if(this._grid[r][c]===null)a.push({r:r,c:c});if(!a.length)return null;return a[Math.floor(Math.random()*a.length)];},
   _lvForPhase:function(){var maxU=Storage.maxUnlocked();var cap=this._phase===0?Math.max(1,maxU):Math.min(Math.max(maxU,this._phase+1),MAX_LEVEL);return Phaser.Math.Between(1,cap);},
   _updateMusic:function(){var filled=0;for(var r=0;r<this._rows;r++)for(var c=0;c<this._cols;c++)if(this._grid[r][c]!==null)filled++;MusicSystem.setFill(filled,this._rows*this._cols);},
-  _spawnShape:function(instant,forcedLevel,forcedFace,forcedCell,forcedTexture){
+  _spawnShape:function(instant,forcedLevel,forcedFace,forcedCell,forcedTexture,noIdle){
     if(!this.scene.isActive('GameScene'))return;
     var cell=forcedCell||this._empty();if(!cell||this._grid[cell.r][cell.c]!==null){this._doCheck();return;}
     var lvl=forcedLevel!==undefined?forcedLevel:this._lvForPhase();
@@ -392,7 +392,7 @@ var GameScene=new Phaser.Class({
     var self=this;
     if(instant){sp.setScale(0.6);this.tweens.add({targets:sp,scaleX:1.08,scaleY:1.08,duration:60,ease:'Power2',onComplete:function(){if(sp&&sp.active)self.tweens.add({targets:sp,scaleX:1,scaleY:1,duration:45});}});}
     else{sp.setScale(0);sp.y=pos.y-28;this.tweens.add({targets:sp,y:pos.y,scaleX:1,scaleY:1,duration:130,ease:'Back.easeOut'});}
-    this._idleAnim(sp);this._scheduleCheck();this._updateMusic();
+    if(!noIdle)this._idleAnim(sp);this._scheduleCheck();this._updateMusic();
   },
   _autoSpawn:function(){if(!this._paused&&!this._offerActive&&!this._goTriggered&&!this._merging&&this.scene.isActive('GameScene'))this._spawnShape(false);},
   _scheduleCheck:function(){
@@ -561,7 +561,7 @@ var GameScene=new Phaser.Class({
       if(!sp||!sp.active||!sp.alive)return;
       var original=sp.faceVariant,token=(sp._celebrateToken||0)+1;sp._celebrateToken=token;
       sp.setTexture(buildShapeTexture(self,sp.level,7));
-      self.tweens.add({targets:sp,scaleX:1.22,scaleY:1.22,angle:Phaser.Math.Between(-12,12),duration:280,ease:'Back.easeOut',yoyo:true,repeat:2,onComplete:function(){if(sp&&sp.active&&sp._celebrateToken===token){sp.setTexture(buildShapeTexture(self,sp.level,original));sp.angle=0;sp.setScale(1);}}});
+      self.tweens.add({targets:sp,scaleX:1.22,scaleY:1.22,angle:(self._openingPair&&self._openingPair.indexOf(sp)!==-1)?0:Phaser.Math.Between(-12,12),duration:280,ease:'Back.easeOut',yoyo:true,repeat:2,onComplete:function(){if(sp&&sp.active&&sp._celebrateToken===token){sp.setTexture(buildShapeTexture(self,sp.level,original));sp.angle=0;sp.setScale(1);}}});
     });
   },
   _showPraise:function(){
