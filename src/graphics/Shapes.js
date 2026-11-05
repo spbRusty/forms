@@ -1,16 +1,16 @@
 import { SZ, MAX_LEVEL, NUM_FACES } from '../config/constants.js';
 export const SHAPE_TYPES=['circle','triangle','square','diamond','star'];
 export const LEVEL_COLORS=[
-  0xFF3399,
-  0x00BBFF,
-  0xFF8800,
-  0xCC22FF,
-  0xFFEE00,
-  0x66EE33,
-  0xFF3322,
-  0x3399FF,
-  0xFFFFFF,
-  0x00FFCC
+  0xE58F82, // coral
+  0x79B8D0, // sky blue
+  0xE8AD70, // apricot
+  0xA98BCB, // lavender
+  0xD9C65F, // warm yellow
+  0x82B99A, // sage green
+  0xD97872, // rose red
+  0x648FC2, // cornflower blue
+  0xB7A18A, // warm taupe
+  0x55B8A8  // teal
 ];
 export function shapeTypeForLevel(lvl){return SHAPE_TYPES[(lvl-1)%5];}
 export function colorForLevel(lvl){
@@ -124,10 +124,10 @@ export function buildShapeTexture(scene,lvl,fv){
   if(scene.textures.exists(key))return key;
   var half=SZ/2,col=colorForLevel(lvl),type=shapeTypeForLevel(lvl);
   var g=scene.make.graphics({x:0,y:0,add:false});
-  var dk=darkenCol(col,0.38);
+  var dk=darkenCol(col,0.62);
   /* drop shadow */
-  g.fillStyle(0x000000,0.30);
-  g.fillCircle(half+3,half+5,half-3);
+  g.fillStyle(0x66594D,0.14);
+  g.fillCircle(half+2,half+3,half-4);
   /* dark outline layer */
   g.fillStyle(dk,1);
   _drawShapeOutline(g,half,type,half-2);
@@ -135,7 +135,7 @@ export function buildShapeTexture(scene,lvl,fv){
   g.fillStyle(col,1);
   _drawShapeOutline(g,half,type,half-5);
   /* inner lighter shine top-left */
-  g.fillStyle(0xFFFFFF,0.28);
+  g.fillStyle(0xFFFFFF,0.38);
   if(type==='circle'){g.fillCircle(half-7,half-7,(half-5)*0.42);}
   else if(type==='triangle'){g.fillCircle(half,half-4,(half-5)*0.28);}
   else if(type==='square'){g.fillCircle(half-4,half-4,(half-5)*0.35);}
